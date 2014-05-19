@@ -1,0 +1,5 @@
+Program to perform some test beam analysis
+
+Note on the Makefile:
+The Makefile will produce an object (.o) in obj for each .cc and .cpp file in src.
+For each .cpp file in src an ececutable will be created in executables.
