@@ -1,14 +1,19 @@
 #include "iostream"
 #include "stdlib.h"
 #include "string"
+#include "vector"
 
 #include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1I.h"
+#include "TH2D.h"
 #include "TString.h"
 
+#include "langauFit.hh"
+
 #include "ConfigFileReader.hh"
+#include "trackDef.h"
 
 int findRunNumber(std::string in)
 {
@@ -40,6 +45,7 @@ int main(int argc, char* argv[])
     }
 
   const int nChannels = 256;
+  const double pitch = 0.080; // mm
 
   TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
   TTree* trkTree = (TTree*) dir->Get("EUFit");
@@ -50,6 +56,8 @@ int main(int argc, char* argv[])
   TString outFileName = conf->GetValue("outFilePath");
   outFileName += findRunNumber(argv[1]);
   outFileName += ".root";
+
+  int maxDist = atoi(conf->GetValue("hitMaxDist").c_str()); // maximum distance form the strip hit by a track in looking at the charge, in number of strips
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -181,32 +189,88 @@ int main(int argc, char* argv[])
    trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
    trkTree->SetBranchStatus("dutTrackX", 1);
    trkTree->SetBranchStatus("dutTrackY", 1);
+   trkTree->SetBranchStatus("dutHitX", 1);
+   trkTree->SetBranchStatus("dutHitY", 1);
 
    long int nEntries = trkTree->GetEntries();
 
    TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 11, -0.5, 10.5);
+   TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
+   TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
+   TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
+   TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 256, -0.5, 255.5);
+   TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
+
    int nTrks = 0; // number of tracks in one event
    long int evtMrk = -1; // event marker
+
+   std::vector<track> trkVec; // tracks in one event
+   double evtAliPH[nChannels] = {0}; // alibava pulse height in on e event
+   float evtAliTime = -1;
+   float evtAliTemp = -275;
+   track* trk;
+
+   int extraCh = -1; // extrapolated channel number
 
    for(int i = 0; i < nEntries; ++i)
      {
        trkTree->GetEntry(i);
 
+       // put the track info into a structure
+       trk = new track();
+       trk->extraPosDUT[0] = dutTrackX;
+       trk->extraPosDUT[1] = dutTrackY;
+       trk->measPosDUT[0] = dutHitX;
+       trk->measPosDUT[1] = dutHitY;
+
        if(evtMrk == EvtNr)
 	 { // add track info to some container
 	   nTrks++;
+	   hitMapDUTtele->Fill(dutTrackX, dutTrackY);
+	   if(dutHitX > -900 && dutHitY > -900) hitMapMatched->Fill(dutHitX, dutHitY);
+
+	   trkVec.push_back(*trk);
 	 }
-       else
-	 { // analyze the event
+       else // new event
+	 { // analyze the old event
 	   trkEvt->Fill(nTrks);
+	   for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
+	     {
+	       // extraCh = (right variable for this) / pitch; // check this!!!
+	       extraCh = trkVec[iTrk].extraPosDUT[1] / pitch; // to be changed
+
+	       extraChDistr->Fill(extraCh);
+
+	       if(evtAliPH[extraCh] != 0)
+		 {
+		   hitMapDUTgoodCh->Fill(trkVec[iTrk].extraPosDUT[0], trkVec[iTrk].extraPosDUT[1]);
+		   extraChDistrGoodCh->Fill(extraCh);
+		 }
+
+
+	     }
 
 	   // set the counters
 	   evtMrk = EvtNr;
+	   trkVec.clear();
+	   // store the first track of the event
+	   trkVec.push_back(*trk);
 	   nTrks = 1;
+	   // store the alibava info of the event
+	   for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh];
+	   evtAliTime = alibava_TDC;
+	   evtAliTemp = alibava_temp;
 	 }
+
+       delete trk;
      }
 
    trkEvt->Write();
+   hitMapDUTtele->Write();
+   hitMapMatched->Write();
+   hitMapDUTgoodCh->Write();
+   extraChDistr->Write();
+   extraChDistrGoodCh->Write();
 
    outFile->Close();
 
