@@ -200,6 +200,9 @@ int main(int argc, char* argv[])
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 256, -0.5, 255.5);
    TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
+   TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
+   TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (absolute value);Hit signal[ADC];Entries", 512, -0.5, 511.5);
+   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (absolute value) in the time cut;Hit signal[ADC];Entries", 512, -0.5, 511.5);
 
    int nTrks = 0; // number of tracks in one event
    long int evtMrk = -1; // event marker
@@ -271,6 +274,9 @@ int main(int argc, char* argv[])
    hitMapDUTgoodCh->Write();
    extraChDistr->Write();
    extraChDistrGoodCh->Write();
+   signalTime->Write();
+   signalDistr->Write();
+   signalDistrTimeCut->Write();
 
    outFile->Close();
 
