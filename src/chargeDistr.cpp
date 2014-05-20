@@ -1,12 +1,31 @@
 #include "iostream"
+#include "stdlib.h"
+#include "string"
 
+#include "TSystem.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TH1I.h"
+#include "TString.h"
 
 #include "ConfigFileReader.hh"
 
+int findRunNumber(std::string in)
+{
+  int slashPos = in.find_last_of("/");
+  std::string name = in.substr(slashPos + 1);
+
+  char num[7];
+  for(int i = 0; i < 6; ++i)
+    num[i] = name[i];
+
+  return atoi(num);
+}
+
 int main(int argc, char* argv[])
 {
+  gSystem->Load("libTree"); // necessary to use the program, root magic
+
   if(argc != 3)
     {
       std::cout << "Usage: chargeDistr inFile confFile" << std::endl;
@@ -22,8 +41,17 @@ int main(int argc, char* argv[])
 
   const int nChannels = 256;
 
-  TDirectory* dir = (TDirectory*) infile->Get("WriteTracksToNTuple");
+  TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
   TTree* trkTree = (TTree*) dir->Get("EUFit");
+
+  ConfigFileReader* conf = new ConfigFileReader(argv[2]);
+  //conf->DumpConfMap();
+
+  TString outFileName = conf->GetValue("outFilePath");
+  outFileName += findRunNumber(argv[1]);
+  outFileName += ".root";
+
+  TFile* outFile = new TFile(outFileName, "RECREATE");
 
 //Declaration of leaves types
    Int_t           Event;
@@ -131,9 +159,9 @@ int main(int argc, char* argv[])
    trkTree->SetBranchAddress("measQ_6",&measQ_6);
    trkTree->SetBranchAddress("fitX_6",&fitX_6);
    trkTree->SetBranchAddress("fitY_6",&fitY_6);
-   trkTree->SetBranchAddress("dutTrackX",&dutTrackX);
+   trkTree->SetBranchAddress("dutTrackX",&dutTrackX); // position extrapolated from the track fit
    trkTree->SetBranchAddress("dutTrackY",&dutTrackY);
-   trkTree->SetBranchAddress("dutHitX",&dutHitX);
+   trkTree->SetBranchAddress("dutHitX",&dutHitX); // cluster matched on the alibava
    trkTree->SetBranchAddress("dutHitY",&dutHitY);
    trkTree->SetBranchAddress("dutHitR",&dutHitR);
    trkTree->SetBranchAddress("dutHitQ",&dutHitQ);
@@ -147,6 +175,40 @@ int main(int argc, char* argv[])
        trkTree->SetBranchAddress(name,&alibavaPH[i]);
      }
 
+   // activate the interesting branches
+   trkTree->SetBranchStatus("*", 0);
+   trkTree->SetBranchStatus("EvtNr", 1);
+   trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
+   trkTree->SetBranchStatus("dutTrackX", 1);
+   trkTree->SetBranchStatus("dutTrackY", 1);
+
+   long int nEntries = trkTree->GetEntries();
+
+   TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 11, -0.5, 10.5);
+   int nTrks = 0; // number of tracks in one event
+   long int evtMrk = -1; // event marker
+
+   for(int i = 0; i < nEntries; ++i)
+     {
+       trkTree->GetEntry(i);
+
+       if(evtMrk == EvtNr)
+	 { // add track info to some container
+	   nTrks++;
+	 }
+       else
+	 { // analyze the event
+	   trkEvt->Fill(nTrks);
+
+	   // set the counters
+	   evtMrk = EvtNr;
+	   nTrks = 1;
+	 }
+     }
+
+   trkEvt->Write();
+
+   outFile->Close();
 
   return 0;
 }
