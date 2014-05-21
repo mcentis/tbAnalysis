@@ -8,6 +8,9 @@
 #include "TTree.h"
 #include "TH1I.h"
 #include "TH2D.h"
+#include "TAxis.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
 #include "TString.h"
 
 #include "langauFit.hh"
@@ -45,7 +48,7 @@ int main(int argc, char* argv[])
     }
 
   const int nChannels = 256;
-  const double pitch = 0.080; // mm
+  //const double pitch = 0.080; // mm
 
   TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
   TTree* trkTree = (TTree*) dir->Get("EUFit");
@@ -57,7 +60,9 @@ int main(int argc, char* argv[])
   outFileName += findRunNumber(argv[1]);
   outFileName += ".root";
 
-  int maxDist = atoi(conf->GetValue("hitMaxDist").c_str()); // maximum distance form the strip hit by a track in looking at the charge, in number of strips
+  const int maxDist = atoi(conf->GetValue("hitMaxDist").c_str()); // maximum distance form the strip hit by a track in looking at the charge, in number of strips
+  const float timeCut1 = atof(conf->GetValue("timeCut1").c_str()); // time cut for the events
+  const float timeCut2 = atof(conf->GetValue("timeCut2").c_str()); // time cut for the events
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -111,6 +116,8 @@ int main(int argc, char* argv[])
    Double_t        fitY_6;
    Double_t        dutTrackX;
    Double_t        dutTrackY;
+   Double_t        dutPixelX;
+   Double_t        dutPixelY;
    Double_t        dutHitX;
    Double_t        dutHitY;
    Double_t        dutHitR;
@@ -167,13 +174,15 @@ int main(int argc, char* argv[])
    trkTree->SetBranchAddress("measQ_6",&measQ_6);
    trkTree->SetBranchAddress("fitX_6",&fitX_6);
    trkTree->SetBranchAddress("fitY_6",&fitY_6);
-   trkTree->SetBranchAddress("dutTrackX",&dutTrackX); // position extrapolated from the track fit
+   trkTree->SetBranchAddress("dutTrackX",&dutTrackX); // position extrapolated from the track fit on the DUT, global ref frame
    trkTree->SetBranchAddress("dutTrackY",&dutTrackY);
+   trkTree->SetBranchAddress("dutPixelX",&dutPixelX); // position extrapolated on the DUT, dut ref frame, in pixel / strip number
+   trkTree->SetBranchAddress("dutPixelY",&dutPixelY);
    trkTree->SetBranchAddress("dutHitX",&dutHitX); // cluster matched on the alibava
    trkTree->SetBranchAddress("dutHitY",&dutHitY);
    trkTree->SetBranchAddress("dutHitR",&dutHitR);
    trkTree->SetBranchAddress("dutHitQ",&dutHitQ);
-   trkTree->SetBranchAddress("alibava_TDC",&alibava_TDC);
+   trkTree->SetBranchAddress("alibava_tdc",&alibava_TDC);
    trkTree->SetBranchAddress("alibava_temp",&alibava_temp);
 
    char name[50];
@@ -189,6 +198,8 @@ int main(int argc, char* argv[])
    trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
    trkTree->SetBranchStatus("dutTrackX", 1);
    trkTree->SetBranchStatus("dutTrackY", 1);
+   trkTree->SetBranchStatus("dutPixelX", 1);
+   trkTree->SetBranchStatus("dutPixelY", 1);
    trkTree->SetBranchStatus("dutHitX", 1);
    trkTree->SetBranchStatus("dutHitY", 1);
 
@@ -198,11 +209,15 @@ int main(int argc, char* argv[])
    TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
-   TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 256, -0.5, 255.5);
+   TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
    TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
    TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
+   TH2D* absSignalTime = new TH2D("absSignalTime", "Hit signal vs time (absolute value);Time [ns];Hit signal [ADC]", 60, 0, 120, 512, -0.5, 511.5);
    TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (absolute value);Hit signal[ADC];Entries", 512, -0.5, 511.5);
    TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (absolute value) in the time cut;Hit signal[ADC];Entries", 512, -0.5, 511.5);
+   TGraph* tempEvt = new TGraph();
+   tempEvt->SetName("tempEvt");
+   tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
 
    int nTrks = 0; // number of tracks in one event
    long int evtMrk = -1; // event marker
@@ -214,6 +229,8 @@ int main(int argc, char* argv[])
    track* trk;
 
    int extraCh = -1; // extrapolated channel number
+   double hitCharge = 0; // charge on the hit
+   double highestCharge = 0; // highest hit charge in the event (believed to be the particle that passes the detector in time)
 
    for(int i = 0; i < nEntries; ++i)
      {
@@ -221,41 +238,64 @@ int main(int argc, char* argv[])
 
        // put the track info into a structure
        trk = new track();
-       trk->extraPosDUT[0] = dutTrackX;
+       trk->extraPosDUT[0] = dutTrackX; // global reference frame
        trk->extraPosDUT[1] = dutTrackY;
+       trk->extraPosDUTpix[0] = dutPixelX; // dut ref frame, in pixel / strip number
+       trk->extraPosDUTpix[1] = dutPixelY;
        trk->measPosDUT[0] = dutHitX;
        trk->measPosDUT[1] = dutHitY;
+
+       hitMapDUTtele->Fill(dutTrackX, dutTrackY);
+       if(dutHitX > -900 && dutHitY > -900) hitMapMatched->Fill(dutHitX, dutHitY);
 
        if(evtMrk == EvtNr)
 	 { // add track info to some container
 	   nTrks++;
-	   hitMapDUTtele->Fill(dutTrackX, dutTrackY);
-	   if(dutHitX > -900 && dutHitY > -900) hitMapMatched->Fill(dutHitX, dutHitY);
 
 	   trkVec.push_back(*trk);
 	 }
        else // new event
-	 { // analyze the old event
-	   trkEvt->Fill(nTrks);
-	   for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
+	 { // analyze the old event, if there are tracks
+	   if(trkVec.size() != 0)
 	     {
-	       // extraCh = (right variable for this) / pitch; // check this!!!
-	       extraCh = trkVec[iTrk].extraPosDUT[1] / pitch; // to be changed
-
-	       extraChDistr->Fill(extraCh);
-
-	       if(evtAliPH[extraCh] != 0)
+	       trkEvt->Fill(nTrks);
+	       for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		 {
-		   hitMapDUTgoodCh->Fill(trkVec[iTrk].extraPosDUT[0], trkVec[iTrk].extraPosDUT[1]);
-		   extraChDistrGoodCh->Fill(extraCh);
+		   extraCh = trk->extraPosDUTpix[1];
+		   extraChDistr->Fill(extraCh);
+
+		   if(evtAliPH[extraCh] != 0)
+		     {
+		       hitMapDUTgoodCh->Fill(trkVec[iTrk].extraPosDUT[0], trkVec[iTrk].extraPosDUT[1]);
+		       extraChDistrGoodCh->Fill(extraCh);
+		     }
+
+		   hitCharge = 0;
+
+		   for(int dist = 0; dist <= maxDist; ++dist) // sum the charge of the strips around the extrapolated value
+		     {
+		       if(dist == 0) hitCharge += evtAliPH[extraCh];
+		       else
+			 {
+			   hitCharge += evtAliPH[extraCh + dist];
+			   hitCharge += evtAliPH[extraCh - dist];
+			 }
+		     }
+
+		   if(fabs(hitCharge) > fabs(highestCharge)) highestCharge = hitCharge; // select the highest hit charge
 		 }
-
-
-	     }
+	       // fill histos old event
+	       signalTime->Fill(evtAliTime, highestCharge);
+	       absSignalTime->Fill(evtAliTime, fabs(highestCharge));
+	       signalDistr->Fill(fabs(highestCharge));
+	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) signalDistrTimeCut->Fill(fabs(highestCharge));
+	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
+	     } // the analysis of the event should be contained in this scope
 
 	   // set the counters
 	   evtMrk = EvtNr;
 	   trkVec.clear();
+	   highestCharge = 0;
 	   // store the first track of the event
 	   trkVec.push_back(*trk);
 	   nTrks = 1;
@@ -268,6 +308,58 @@ int main(int argc, char* argv[])
        delete trk;
      }
 
+   TDirectory* timeSlicesDir = outFile->mkdir("timeSlices");
+   timeSlicesDir->cd();   
+
+   TGraphErrors* mpvTime = new TGraphErrors();
+   mpvTime->SetName("mpvTime");
+   mpvTime->SetTitle("Fitted Landau MPV vs time");
+
+   int nBins = absSignalTime->GetXaxis()->GetNbins();
+   double time = 0;
+   double binW = 0;
+   TH1D* slice = NULL;
+   TF1* fit = NULL;
+   char title[200];
+
+   TCanvas* fitCan = new TCanvas("fitCan");
+
+   for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
+     {
+       time = absSignalTime->GetXaxis()->GetBinCenter(iBin);
+       binW = absSignalTime->GetXaxis()->GetBinWidth(iBin);
+
+       sprintf(name, "timeSlice_%f", time);
+       sprintf(title, "Hit charge distribution (absolute value) at time %f;Hit charge [ADC];Entries", time);
+
+       slice = absSignalTime->ProjectionY(name, iBin, iBin);
+       slice->SetTitle(title);
+
+       fit = lanGausFit(slice, 0, 250, 8);
+       mpvTime->SetPoint(iBin - 1, time, fit->GetParameter(1));
+       mpvTime->SetPointError(iBin - 1, binW / 2, fit->GetParError(1));
+
+       slice->Write();
+     }
+
+   delete fitCan;
+
+   // draw graphs to name the axis
+   TCanvas* servCan = new TCanvas("servCan");
+   servCan->cd();
+
+   tempEvt->Draw("AP");
+   tempEvt->GetXaxis()->SetTitle("Event number");
+   tempEvt->GetYaxis()->SetTitle("Temperature [C]");
+
+   mpvTime->Draw("AP");
+   mpvTime->GetXaxis()->SetTitle("Time [ns]");
+   mpvTime->GetYaxis()->SetTitle("MPV [ADC]");
+
+   delete servCan;
+
+   outFile->cd();
+
    trkEvt->Write();
    hitMapDUTtele->Write();
    hitMapMatched->Write();
@@ -275,8 +367,11 @@ int main(int argc, char* argv[])
    extraChDistr->Write();
    extraChDistrGoodCh->Write();
    signalTime->Write();
+   absSignalTime->Write();
+   mpvTime->Write();
    signalDistr->Write();
    signalDistrTimeCut->Write();
+   tempEvt->Write();
 
    outFile->Close();
 

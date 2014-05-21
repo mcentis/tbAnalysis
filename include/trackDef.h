@@ -11,6 +11,7 @@ struct track
   double extraPosTelescope[nTelPlanes][3]; // extrapolated hits on the telescope
   double measPosDUT[3]; // measured hit in the DUT
   double extraPosDUT[3]; // extrapolated hit on the DUT
+  double extraPosDUTpix[3]; // extrapolated hit on the DUT in pixels (fake x and z coordinates)
   bool recHit[nTelPlanes + 1]; // true if a hit was found in the plane, +1 for DUT
   int ndf; // degrees of freedom of the track fit
   double chi2; // chi2 of the track fit
@@ -30,6 +31,7 @@ struct track
       {
 	measPosDUT[i] = -10000;
 	extraPosDUT[i] = -10000;
+	extraPosDUTpix[i] = -10000;
       }
 
     for(int i = 0; i < nTelPlanes + 1; ++i) recHit[i] = false;

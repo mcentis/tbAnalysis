@@ -118,12 +118,12 @@ TF1* lanGausFit(TH1* inHist, double fitR1, double fitR2, double gausSig = 1) // 
    sv[2] = intStart; // integral
    sv[3] = gausSig + gausSig * 0.5; // gaussian width
 
-   std::cout << "Fitting histogram " << inHist->GetName() << std::endl;
-   std::cout << "Starting parameters" << std::endl;
-   std::cout << "Landau width " << sv[0] << std::endl;
-   std::cout << "MPV          " << sv[1] << std::endl;
-   std::cout << "Area         " << sv[2] << std::endl;
-   std::cout << "Gaus sigma   " << sv[0] << std::endl;
+   // std::cout << "Fitting histogram " << inHist->GetName() << std::endl;
+   // std::cout << "Starting parameters" << std::endl;
+   // std::cout << "Landau width " << sv[0] << std::endl;
+   // std::cout << "MPV          " << sv[1] << std::endl;
+   // std::cout << "Area         " << sv[2] << std::endl;
+   // std::cout << "Gaus sigma   " << sv[0] << std::endl;
 
    // parameter limits
    pllo[0]=0.01; pllo[1]=0.5; pllo[2]=1.0; pllo[3]=gausSig;
@@ -143,7 +143,7 @@ TF1* lanGausFit(TH1* inHist, double fitR1, double fitR2, double gausSig = 1) // 
        ffit->SetParLimits(i, pllo[i], plhi[i]);
      }
 
-   inHist->Fit(ffit,"RB");   // fit within specified range, use ParLimits
+   inHist->Fit(ffit,"RBQ");   // fit within specified range, use ParLimits
 
    return ffit;
 }
