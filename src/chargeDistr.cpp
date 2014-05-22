@@ -63,10 +63,14 @@ int main(int argc, char* argv[])
   const int maxDist = atoi(conf->GetValue("hitMaxDist").c_str()); // maximum distance form the strip hit by a track in looking at the charge, in number of strips
   const float timeCut1 = atof(conf->GetValue("timeCut1").c_str()); // time cut for the events
   const float timeCut2 = atof(conf->GetValue("timeCut2").c_str()); // time cut for the events
+  int readenPolarity = atoi(conf->GetValue("polarity").c_str()); // expected signal polarity
+  const int polarity = readenPolarity / abs(readenPolarity);
+  const float negSigmaFit = atof(conf->GetValue("negSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the negative direction
+  const float posSigmaFit = atof(conf->GetValue("posSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the positive direction
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
-//Declaration of leaves types
+  //Declaration of leaves types
    Int_t           Event;
    Int_t           RunNr;
    Int_t           EvtNr;
@@ -212,9 +216,9 @@ int main(int argc, char* argv[])
    TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
    TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
    TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
-   TH2D* absSignalTime = new TH2D("absSignalTime", "Hit signal vs time (absolute value);Time [ns];Hit signal [ADC]", 60, 0, 120, 512, -0.5, 511.5);
-   TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (absolute value);Hit signal[ADC];Entries", 512, -0.5, 511.5);
-   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (absolute value) in the time cut;Hit signal[ADC];Entries", 512, -0.5, 511.5);
+   TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 251, -50.5, 511.5);
+   TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
+   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 251, -50.5, 511.5);
    TGraph* tempEvt = new TGraph();
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
@@ -232,6 +236,8 @@ int main(int argc, char* argv[])
    double hitCharge = 0; // charge on the hit
    double highestCharge = 0; // highest hit charge in the event (believed to be the particle that passes the detector in time)
 
+   bool analyzeEvent = false;
+
    for(int i = 0; i < nEntries; ++i)
      {
        trkTree->GetEntry(i);
@@ -247,6 +253,7 @@ int main(int argc, char* argv[])
 
        hitMapDUTtele->Fill(dutTrackX, dutTrackY);
        if(dutHitX > -900 && dutHitY > -900) hitMapMatched->Fill(dutHitX, dutHitY);
+       extraChDistr->Fill(dutPixelY);
 
        if(evtMrk == EvtNr)
 	 { // add track info to some container
@@ -256,20 +263,36 @@ int main(int argc, char* argv[])
 	 }
        else // new event
 	 { // analyze the old event, if there are tracks
-	   if(trkVec.size() != 0)
-	     //if(trkVec.size() == 1) // 1 track events
+	   analyzeEvent = true;
+	   for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y)
+	     {
+	       extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
+	       if(extraCh < 0 || extraCh >= nChannels) // protect array margins (no seg violation hopefully)
+		 {
+		   analyzeEvent = false;
+		   break;
+		 }
+
+	       if(evtAliPH[extraCh] != 0 && evtAliPH[extraCh + 1] != 0 && evtAliPH[extraCh - 1] != 0) continue; // the strip traversed is not a border strip or a not bonded one
+	       else
+		 {
+		   analyzeEvent = false;
+		   break;
+		 }
+	     }
+
+	   if(analyzeEvent && trkVec.size() != 0) analyzeEvent = true; // check that there is at least a track 
+	   else analyzeEvent = false;
+
+	   if(analyzeEvent) // all the event tracks in a sensitive part of the sensor and at least one track
 	     {
 	       trkEvt->Fill(nTrks);
 	       for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		 {
 		   extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
-		   extraChDistr->Fill(extraCh);
 
-		   if(evtAliPH[extraCh] != 0)
-		     {
-		       hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).extraPosDUT[1]);
-		       extraChDistrGoodCh->Fill(extraCh);
-		     }
+		   hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).extraPosDUT[1]);
+		   extraChDistrGoodCh->Fill(extraCh);
 
 		   hitCharge = 0;
 
@@ -287,9 +310,9 @@ int main(int argc, char* argv[])
 		 }
 	       // fill histos old event
 	       signalTime->Fill(evtAliTime, highestCharge);
-	       absSignalTime->Fill(evtAliTime, fabs(highestCharge));
-	       signalDistr->Fill(fabs(highestCharge));
-	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) signalDistrTimeCut->Fill(fabs(highestCharge));
+	       positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
+	       signalDistr->Fill(highestCharge * polarity);
+	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) signalDistrTimeCut->Fill(highestCharge * polarity);
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
 
@@ -316,7 +339,11 @@ int main(int argc, char* argv[])
    mpvTime->SetName("mpvTime");
    mpvTime->SetTitle("Fitted Landau MPV vs time");
 
-   int nBins = absSignalTime->GetXaxis()->GetNbins();
+   TGraph* chi2SliceFit = new TGraph();
+   chi2SliceFit->SetName("chi2SliceFit");
+   chi2SliceFit->SetTitle("Reduced #chi^{2} of the landau gaussian fits");
+
+   int nBins = positivizedSignalTime->GetXaxis()->GetNbins();
    double time = 0;
    double binW = 0;
    TH1D* slice = NULL;
@@ -325,20 +352,25 @@ int main(int argc, char* argv[])
 
    TCanvas* fitCan = new TCanvas("fitCan");
 
+   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+
    for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
      {
-       time = absSignalTime->GetXaxis()->GetBinCenter(iBin);
-       binW = absSignalTime->GetXaxis()->GetBinWidth(iBin);
+       time = positivizedSignalTime->GetXaxis()->GetBinCenter(iBin);
+       binW = positivizedSignalTime->GetXaxis()->GetBinWidth(iBin);
 
        sprintf(name, "timeSlice_%f", time);
-       sprintf(title, "Hit charge distribution (absolute value) at time %f;Hit charge [ADC];Entries", time);
+       sprintf(title, "Hit charge distribution (positivized) at time %f;Hit charge [ADC];Entries", time);
 
-       slice = absSignalTime->ProjectionY(name, iBin, iBin);
+       slice = positivizedSignalTime->ProjectionY(name, iBin, iBin);
        slice->SetTitle(title);
 
-       fit = lanGausFit(slice, 10, 150, 8);
+       fit = lanGausFit(slice, negSigmaFit, posSigmaFit);
        mpvTime->SetPoint(iBin - 1, time, fit->GetParameter(1));
        mpvTime->SetPointError(iBin - 1, binW / 2, fit->GetParError(1));
+
+       if(fit->GetChisquare() > 0 && fit->GetNDF() > 0) // avoid to put nonsense in the graph
+	 chi2SliceFit->SetPoint(chi2SliceFit->GetN(), time, fit->GetChisquare() / fit->GetNDF());
 
        slice->Write();
      }
@@ -357,6 +389,10 @@ int main(int argc, char* argv[])
    mpvTime->GetXaxis()->SetTitle("Time [ns]");
    mpvTime->GetYaxis()->SetTitle("MPV [ADC]");
 
+   chi2SliceFit->Draw("AP");
+   chi2SliceFit->GetXaxis()->SetTitle("Time [ns]");
+   chi2SliceFit->GetYaxis()->SetTitle("#chi^{2} / ndf");
+
    delete servCan;
 
    outFile->cd();
@@ -368,8 +404,9 @@ int main(int argc, char* argv[])
    extraChDistr->Write();
    extraChDistrGoodCh->Write();
    signalTime->Write();
-   absSignalTime->Write();
+   positivizedSignalTime->Write();
    mpvTime->Write();
+   chi2SliceFit->Write();
    signalDistr->Write();
    signalDistrTimeCut->Write();
    tempEvt->Write();
