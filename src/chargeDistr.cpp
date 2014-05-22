@@ -257,16 +257,17 @@ int main(int argc, char* argv[])
        else // new event
 	 { // analyze the old event, if there are tracks
 	   if(trkVec.size() != 0)
+	     //if(trkVec.size() == 1) // 1 track events
 	     {
 	       trkEvt->Fill(nTrks);
 	       for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		 {
-		   extraCh = trk->extraPosDUTpix[1];
+		   extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
 		   extraChDistr->Fill(extraCh);
 
 		   if(evtAliPH[extraCh] != 0)
 		     {
-		       hitMapDUTgoodCh->Fill(trkVec[iTrk].extraPosDUT[0], trkVec[iTrk].extraPosDUT[1]);
+		       hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).extraPosDUT[1]);
 		       extraChDistrGoodCh->Fill(extraCh);
 		     }
 
@@ -335,7 +336,7 @@ int main(int argc, char* argv[])
        slice = absSignalTime->ProjectionY(name, iBin, iBin);
        slice->SetTitle(title);
 
-       fit = lanGausFit(slice, 0, 250, 8);
+       fit = lanGausFit(slice, 10, 150, 8);
        mpvTime->SetPoint(iBin - 1, time, fit->GetParameter(1));
        mpvTime->SetPointError(iBin - 1, binW / 2, fit->GetParError(1));
 
