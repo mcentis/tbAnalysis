@@ -216,9 +216,9 @@ int main(int argc, char* argv[])
    TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
    TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
    TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
-   TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 251, -50.5, 511.5);
+   TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -50.5, 511.5);
    TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
-   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 251, -50.5, 511.5);
+   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
    TGraph* tempEvt = new TGraph();
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
@@ -335,13 +335,27 @@ int main(int argc, char* argv[])
    TDirectory* timeSlicesDir = outFile->mkdir("timeSlices");
    timeSlicesDir->cd();   
 
-   TGraphErrors* mpvTime = new TGraphErrors();
-   mpvTime->SetName("mpvTime");
-   mpvTime->SetTitle("Fitted Landau MPV vs time");
+   const int nPars = 4; // parameters of the langaus fit
+   TGraphErrors* lanGausParVsTime[nPars];
+   const char* names[nPars] = {"lanWidthTime", "mpvTime", "areaTime", "gausSigTime"};
+   const char* titles[nPars] = {"Fitted Landau width vs time", "Fitted Landau MPV vs time", "Fitted area vs time", "Fitted Gaussian sigma vs time"};
+   for(int iPar = 0; iPar < nPars; ++iPar)
+     {
+       lanGausParVsTime[iPar] = new TGraphErrors();
+       lanGausParVsTime[iPar]->SetName(names[iPar]);
+       lanGausParVsTime[iPar]->SetTitle(titles[iPar]);
+       lanGausParVsTime[iPar]->SetMarkerStyle(8);
+     }
+
+   TGraph* maxLanGauFit = new TGraph();
+   maxLanGauFit->SetName("maxLanGauFit");
+   maxLanGauFit->SetTitle("Maximum of the fitted Landau Gaussian convolution");
+   maxLanGauFit->SetMarkerStyle(8);
 
    TGraph* chi2SliceFit = new TGraph();
    chi2SliceFit->SetName("chi2SliceFit");
    chi2SliceFit->SetTitle("Reduced #chi^{2} of the landau gaussian fits");
+   chi2SliceFit->SetMarkerStyle(8);
 
    int nBins = positivizedSignalTime->GetXaxis()->GetNbins();
    double time = 0;
@@ -366,8 +380,15 @@ int main(int argc, char* argv[])
        slice->SetTitle(title);
 
        fit = lanGausFit(slice, negSigmaFit, posSigmaFit);
-       mpvTime->SetPoint(iBin - 1, time, fit->GetParameter(1));
-       mpvTime->SetPointError(iBin - 1, binW / 2, fit->GetParError(1));
+
+       for(int iPar = 0; iPar < nPars; ++iPar)
+	 {
+	   lanGausParVsTime[iPar]->SetPoint(iBin - 1, time, fit->GetParameter(iPar));
+	   lanGausParVsTime[iPar]->SetPointError(iBin - 1, binW / 2, fit->GetParError(iPar));
+	 }
+
+       if(fit->GetMaximumX() > -200) // exclude nonsense
+	 maxLanGauFit->SetPoint(maxLanGauFit->GetN(), time, fit->GetMaximumX());
 
        if(fit->GetChisquare() > 0 && fit->GetNDF() > 0) // avoid to put nonsense in the graph
 	 chi2SliceFit->SetPoint(chi2SliceFit->GetN(), time, fit->GetChisquare() / fit->GetNDF());
@@ -385,9 +406,17 @@ int main(int argc, char* argv[])
    tempEvt->GetXaxis()->SetTitle("Event number");
    tempEvt->GetYaxis()->SetTitle("Temperature [C]");
 
-   mpvTime->Draw("AP");
-   mpvTime->GetXaxis()->SetTitle("Time [ns]");
-   mpvTime->GetYaxis()->SetTitle("MPV [ADC]");
+   const char* axTitles[nPars] = {"Width [ADC]", "MPV [ADC]", "Area [Entries]", "Gaus sigma [ADC]"};
+   for(int iPar = 0; iPar < nPars; ++iPar)
+     {
+       lanGausParVsTime[iPar]->Draw("AP");
+       lanGausParVsTime[iPar]->GetXaxis()->SetTitle("Time [ns]");
+       lanGausParVsTime[iPar]->GetYaxis()->SetTitle(axTitles[iPar]);
+     }
+
+   maxLanGauFit->Draw("AP");
+   maxLanGauFit->GetXaxis()->SetTitle("Time [ns]");
+   maxLanGauFit->GetYaxis()->SetTitle("Function max [ADC]");
 
    chi2SliceFit->Draw("AP");
    chi2SliceFit->GetXaxis()->SetTitle("Time [ns]");
@@ -405,7 +434,11 @@ int main(int argc, char* argv[])
    extraChDistrGoodCh->Write();
    signalTime->Write();
    positivizedSignalTime->Write();
-   mpvTime->Write();
+
+   for(int iPar = 0; iPar < nPars; ++iPar)
+     lanGausParVsTime[iPar]->Write();
+   
+   maxLanGauFit->Write();
    chi2SliceFit->Write();
    signalDistr->Write();
    signalDistrTimeCut->Write();

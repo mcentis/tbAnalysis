@@ -87,6 +87,21 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
 {
   int histMaxBin = inHist->GetMaximumBin();
   double histMax = inHist->GetXaxis()->GetBinCenter(histMaxBin);
+
+  const double minMaxPosition = 0.5; // minimum position accepted for the max
+  if(histMax < minMaxPosition) // if the max is too low it probably it is in the noise
+    {
+      int startBin = 1 + (minMaxPosition - inHist->GetXaxis()->GetXmin()) / inHist->GetXaxis()->GetBinWidth(5);
+      int endBin = inHist->GetXaxis()->GetNbins() - 2;
+      double yMax = 0;
+      for(int iBin = startBin; iBin < endBin; ++iBin)
+	if(inHist->GetBinContent(iBin) >= yMax)
+	  {
+	    yMax = inHist->GetBinContent(iBin);
+	    histMax = inHist->GetXaxis()->GetBinCenter(iBin);
+	  }
+    }
+
   double halfRange = 20; // guess for the range of the gaus fit
 
   static int funcCall = 0; // number of times the function was called
@@ -96,7 +111,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   TF1* gausFit = new TF1(name, "gaus", histMax - halfRange, histMax + halfRange);
   gausFit->SetLineColor(kBlue);
 
-  inHist->Fit(gausFit, "RQ+");
+  inHist->Fit(gausFit, "RQ");
 
   double* Gpar = gausFit->GetParameters();
 
@@ -164,7 +179,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
       ffit->SetParLimits(i, pllo[i], plhi[i]);
     }
 
-  inHist->Fit(ffit,"RBQ+");   // fit within specified range, use ParLimits
+  inHist->Fit(ffit,"RBQ");   // fit within specified range, use ParLimits
 
   return ffit;
 }
