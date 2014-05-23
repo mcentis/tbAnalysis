@@ -80,7 +80,7 @@ Double_t langaufun(Double_t* x, Double_t* par) // the landau gaussian convolutio
   return (par[2] * step * sum * invsq2pi / par[3]);
 }
 
-// the function performa a gaussian fit around the highest bin content of the histo and uses the gaus sigma and center to set the 
+// the function performs a gaussian fit around the highest bin content of the histo and uses the gaus sigma and center to set the 
 // fit range and starting parameters of the landau gaus fit
 // the parameters are: histo to be fitted, number of sigma in the negative direction for the fit range and the same in positive direction
 TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function to be used
@@ -129,7 +129,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   int binMin; // max and min bin number (corresponding to the range)
   int binMax;
   double intStart = 0; // start value of the integral
-  double mpvStart = 0; // start value of the mpv
+  double mpvStart = Gpar[1]; // start value of the mpv
 
   double binW = inHist->GetXaxis()->GetBinWidth(5); // bin width from a random bin
   double xMin = inHist->GetXaxis()->GetXmin();
@@ -153,14 +153,17 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   sv[0] = 5;//landau width
   sv[1] = mpvStart; // mpv landau
   sv[2] = intStart; // integral
-  sv[3] = gausSig; // gaussian width
-
+  if(gausSig > sv[0])
+    sv[3] = sqrt(gausSig * gausSig - sv[0] * sv[0]); // gaussian width
+  else
+    sv[3] = gausSig;
+    
   // std::cout << "Fitting histogram " << inHist->GetName() << std::endl;
   // std::cout << "Starting parameters" << std::endl;
   // std::cout << "Landau width " << sv[0] << std::endl;
   // std::cout << "MPV          " << sv[1] << std::endl;
   // std::cout << "Area         " << sv[2] << std::endl;
-  // std::cout << "Gaus sigma   " << sv[0] << std::endl;
+  // std::cout << "Gaus sigma   " << sv[3] << std::endl;
 
   // parameter limits
   pllo[0]=0.01; pllo[1]=-15.0; pllo[2]=1.0; pllo[3]=gausSig * 0.1;
@@ -179,10 +182,64 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
       ffit->SetParLimits(i, pllo[i], plhi[i]);
     }
 
-  inHist->Fit(ffit,"RBQ");   // fit within specified range, use ParLimits
+  inHist->Fit(ffit,"RQ"); // fit within specified range
 
   return ffit;
 }
 
+Double_t gausLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau gaussian convolution
+{
+  Double_t gausPart = par[0] * TMath::Gaus(*x, par[1], par[2]);
+  Double_t langauPart = langaufun(x, &par[3]); // par 0 to 2 belong to the gauss part
+
+  return langauPart + gausPart;
+}
+
+TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
+{
+  TF1* gausFunc = new TF1("gausFunc", "gaus", -30, 10); // referred as g0 in the next comments
+  inHist->Fit(gausFunc, "RQ");
+
+  TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
+
+  const int nPars = 7;
+  double par[nPars] = {0};
+
+  for(int i = 0; i < 3; ++i) par[i] = gausFunc->GetParameter(i); // get the gaus fit parameters
+  for(int i = 3; i < nPars; ++i) par[i] = langauFunc->GetParameter(i - 3); // get parameters form langaus fit
+
+  double parLimHi[nPars] = {0};
+  double parLimLo[nPars] = {0};
+
+  parLimLo[0] = -5; // g0 const
+  parLimHi[0] = 1000000;
+  parLimLo[1] = par[1] - 0.5 * par[2]; // g0 mean
+  parLimHi[1] = par[1] + 0.5 * par[2];
+
+  for(int i = 2; i < nPars; ++i) // allow a 50% variation on the already fitted parameters
+    {
+      parLimLo[i] = par[i] - 0.5 * fabs(par[i]);
+      parLimHi[i] = par[i] + 0.5 * fabs(par[i]);
+    }
+
+  const char* parNames[nPars] = {"ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma"};
+  std::cout << "Start parameters and limits\n";
+  for(int i = 0; i < nPars; ++i)
+    std::cout << parNames[i] << "\t\t" << par[i] << "    " << parLimLo[i] << "   " << parLimHi[i] << " \n";
+  std::cout << std::endl;
+
+  double fitR1 = inHist->GetXaxis()->GetXmin();
+  double fitR2 = inHist->GetXaxis()->GetXmax();
+
+  TF1* gausLang = new TF1("gausLang", gausLangaufun, fitR1, fitR2, nPars);
+  gausLang->SetParameters(par);
+  gausLang->SetParNames("ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma");
+  for(int i = 0; i < nPars; ++i)
+    gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
+
+  inHist->Fit(gausLang, "R");
+
+  return gausLang;
+}
 
 #endif // #ifndef LANGAUFIT_HH

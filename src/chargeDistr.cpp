@@ -366,7 +366,8 @@ int main(int argc, char* argv[])
 
    TCanvas* fitCan = new TCanvas("fitCan");
 
-   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   // lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
 
    for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
      {
