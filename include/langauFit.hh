@@ -197,7 +197,7 @@ Double_t gausLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau g
 
 TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
 {
-  TF1* gausFunc = new TF1("gausFunc", "gaus", -30, 10); // referred as g0 in the next comments
+  TF1* gausFunc = new TF1("gausFunc", "gaus", -30, 5); // referred as g0 in the next comments
   inHist->Fit(gausFunc, "RQ");
 
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);

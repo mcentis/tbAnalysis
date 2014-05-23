@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     }
 
   const int nChannels = 256;
-  //const double pitch = 0.080; // mm
+  const double pitch = 0.080; // mm
 
   TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
   TTree* trkTree = (TTree*) dir->Get("EUFit");
@@ -223,6 +223,17 @@ int main(int argc, char* argv[])
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
 
+   // three histos to get a map of charge collection
+   double minX = -20000;
+   double maxX = 20000;
+   int binX = 1000;
+   double minY = -0.5;
+   double maxY = 160.5;
+   int binY = 51;
+   TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* hitMapMod016 = new TH2D("hitMapMod016", "Hit map in the time cut;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+
    int nTrks = 0; // number of tracks in one event
    long int evtMrk = -1; // event marker
 
@@ -235,6 +246,14 @@ int main(int argc, char* argv[])
    int extraCh = -1; // extrapolated channel number
    double hitCharge = 0; // charge on the hit
    double highestCharge = 0; // highest hit charge in the event (believed to be the particle that passes the detector in time)
+   int trackPos = 0; // position of the track in the track vector
+   double binWidthX = 0; // bin width to be used to determine which bin to fill in the charge map
+   double binWidthY = 0;
+   double xMin = chargeMap->GetXaxis()->GetXmin();
+   double yMin = chargeMap->GetYaxis()->GetXmin();
+   int iBinX = 0; // bin to be filled
+   int iBinY = 0; // bin to be filled
+   double oldContent = 0;
 
    bool analyzeEvent = false;
 
@@ -306,13 +325,28 @@ int main(int argc, char* argv[])
 			 }
 		     }
 
-		   if(fabs(hitCharge) > fabs(highestCharge)) highestCharge = hitCharge; // select the highest hit charge
+		   if(fabs(hitCharge) > fabs(highestCharge))  // select the highest hit charge
+		     {
+		       highestCharge = hitCharge;
+		       trackPos = iTrk;
+		     }
 		 }
 	       // fill histos old event
 	       signalTime->Fill(evtAliTime, highestCharge);
 	       positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
 	       signalDistr->Fill(highestCharge * polarity);
-	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) signalDistrTimeCut->Fill(highestCharge * polarity);
+	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2)
+		 {
+		   signalDistrTimeCut->Fill(highestCharge * polarity);
+
+		   //fix the block below !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		   iBinX = 1 + (1000 * trkVec.at(trackPos).extraPosDUT[0] -xMin) / binWidthX;
+		   iBinY = 1 + ((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000) - yMin) / binWidthY;
+		   oldContent = chargeMap->GetBinContent(iBinX, iBinY);
+		   chargeMap->SetBinContent(iBinX, iBinY, oldContent + highestCharge * polarity);
+
+		   hitMapMod016->Fill(1000 * trkVec.at(trackPos).extraPosDUT[0], (int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		 }
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
 
@@ -366,8 +400,8 @@ int main(int argc, char* argv[])
 
    TCanvas* fitCan = new TCanvas("fitCan");
 
-   // lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
-   gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
    for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
      {
@@ -444,6 +478,9 @@ int main(int argc, char* argv[])
    signalDistr->Write();
    signalDistrTimeCut->Write();
    tempEvt->Write();
+   hitMapMod016->Write();
+   chargeMap->Write();
+   chargeMapNormalized->Write();
 
    outFile->Close();
 
