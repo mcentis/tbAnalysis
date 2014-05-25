@@ -226,10 +226,10 @@ int main(int argc, char* argv[])
    // three histos to get a map of charge collection
    double minX = -20000;
    double maxX = 20000;
-   int binX = 1000;
+   int binX = 100;
    double minY = -0.5;
    double maxY = 160.5;
-   int binY = 51;
+   int binY = 31;
    TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
    TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
    TH2D* hitMapMod016 = new TH2D("hitMapMod016", "Hit map in the time cut;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
@@ -247,12 +247,9 @@ int main(int argc, char* argv[])
    double hitCharge = 0; // charge on the hit
    double highestCharge = 0; // highest hit charge in the event (believed to be the particle that passes the detector in time)
    int trackPos = 0; // position of the track in the track vector
-   double binWidthX = 0; // bin width to be used to determine which bin to fill in the charge map
-   double binWidthY = 0;
-   double xMin = chargeMap->GetXaxis()->GetXmin();
-   double yMin = chargeMap->GetYaxis()->GetXmin();
-   int iBinX = 0; // bin to be filled
-   int iBinY = 0; // bin to be filled
+   int iBin = 0; // bin to be filled
+   double posX = 0; // store positions
+   double posY = 0; // this one will be the mod of the position
    double oldContent = 0;
 
    bool analyzeEvent = false;
@@ -339,13 +336,13 @@ int main(int argc, char* argv[])
 		 {
 		   signalDistrTimeCut->Fill(highestCharge * polarity);
 
-		   //fix the block below !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		   iBinX = 1 + (1000 * trkVec.at(trackPos).extraPosDUT[0] -xMin) / binWidthX;
-		   iBinY = 1 + ((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000) - yMin) / binWidthY;
-		   oldContent = chargeMap->GetBinContent(iBinX, iBinY);
-		   chargeMap->SetBinContent(iBinX, iBinY, oldContent + highestCharge * polarity);
+		   posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
+		   posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		   iBin = chargeMap->FindBin(posX, posY); // find the bin
+		   oldContent = chargeMap->GetBinContent(iBin);
+		   chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
 
-		   hitMapMod016->Fill(1000 * trkVec.at(trackPos).extraPosDUT[0], (int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		   hitMapMod016->Fill(posX, posY);
 		 }
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
@@ -432,6 +429,20 @@ int main(int argc, char* argv[])
      }
 
    delete fitCan;
+
+   double chargeSum;
+   int nTracks;
+   for(int iBinX = 1; iBinX < chargeMap->GetNbinsX(); ++iBinX)
+     for(int iBinY = 1; iBinY < chargeMap->GetNbinsY(); ++iBinY)
+       {
+	 chargeSum = chargeMap->GetBinContent(iBinX, iBinY);
+	 nTracks = hitMapMod016->GetBinContent(iBinX, iBinY);
+
+	 if(nTracks != 0)
+	   chargeMapNormalized->SetBinContent(iBinX, iBinY, chargeSum / nTracks);
+
+       }
+
 
    // draw graphs to name the axis
    TCanvas* servCan = new TCanvas("servCan");
