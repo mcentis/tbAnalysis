@@ -12,6 +12,7 @@
 #include "TGraph.h"
 #include "TGraphErrors.h"
 #include "TString.h"
+#include "TProfile.h"
 
 #include "langauFit.hh"
 
@@ -386,6 +387,9 @@ int main(int argc, char* argv[])
        delete trk;
      }
 
+   TProfile* positivizedSignalTimeProfile = positivizedSignalTime->ProfileX("positivizedSignalTimeProfile");
+   positivizedSignalTimeProfile->SetTitle("Positivized signal time profile");
+
    TDirectory* timeSlicesDir = outFile->mkdir("timeSlices");
    timeSlicesDir->cd();   
 
@@ -455,7 +459,7 @@ int main(int argc, char* argv[])
 
    double chargeSum;
    int nTracks;
-   for(int iBinX = 1; iBinX < chargeMapMod160->GetNbinsX(); ++iBinX)
+   for(int iBinX = 1; iBinX < chargeMapMod160->GetNbinsX(); ++iBinX) // normalize charge map in the time cut
      for(int iBinY = 1; iBinY < chargeMapMod160->GetNbinsY(); ++iBinY)
        {
 	 chargeSum = chargeMapMod160->GetBinContent(iBinX, iBinY);
@@ -466,7 +470,12 @@ int main(int argc, char* argv[])
 
        }
 
-   for(int iBinX = 1; iBinX < chargeMap->GetNbinsX(); ++iBinX)
+   TH1D* chargeMapMod160NormProjX = chargeMapMod160Normalized->ProjectionX("chargeMapMod160NormProjX"); // projections in x and y
+   chargeMapMod160NormProjX->SetTitle("X projection of the normalized charge distribution");
+   TH1D* chargeMapMod160NormProjY = chargeMapMod160Normalized->ProjectionY("chargeMapMod160NormProjY");
+   chargeMapMod160NormProjY->SetTitle("Y projection of the normalized charge distribution");
+
+   for(int iBinX = 1; iBinX < chargeMap->GetNbinsX(); ++iBinX) // normalize charge map in the time cut
      for(int iBinY = 1; iBinY < chargeMap->GetNbinsY(); ++iBinY)
        {
 	 chargeSum = chargeMap->GetBinContent(iBinX, iBinY);
@@ -476,6 +485,11 @@ int main(int argc, char* argv[])
 	   chargeMapNormalized->SetBinContent(iBinX, iBinY, chargeSum / nTracks);
 
        }
+
+   TH1D* chargeMapNormProjX = chargeMapNormalized->ProjectionX("chargeMapNormProjX"); // projections in x and y
+   chargeMapNormProjX->SetTitle("X projection of the normalized charge distribution");
+   TH1D* chargeMapNormProjY = chargeMapNormalized->ProjectionY("chargeMapNormProjY");
+   chargeMapNormProjY->SetTitle("Y projection of the normalized charge distribution");
 
    // draw graphs to name the axis
    TCanvas* servCan = new TCanvas("servCan");
@@ -513,6 +527,7 @@ int main(int argc, char* argv[])
    extraChDistrGoodCh->Write();
    signalTime->Write();
    positivizedSignalTime->Write();
+   positivizedSignalTimeProfile->Write();
 
    for(int iPar = 0; iPar < nPars; ++iPar)
      lanGausParVsTime[iPar]->Write();
@@ -525,9 +540,13 @@ int main(int argc, char* argv[])
    hitMapMod160->Write();
    chargeMapMod160->Write();
    chargeMapMod160Normalized->Write();
+   chargeMapMod160NormProjX->Write();
+   chargeMapMod160NormProjY->Write();
    hitMap->Write();
    chargeMap->Write();
    chargeMapNormalized->Write();
+   chargeMapNormProjX->Write();
+   chargeMapNormProjY->Write();
 
    outFile->Close();
 
