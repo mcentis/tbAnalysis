@@ -214,6 +214,10 @@ int main(int argc, char* argv[])
    long int nEntries = trkTree->GetEntries();
 
    TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 11, -0.5, 10.5);
+   TGraph* trkVsEvt = new TGraph();
+   trkVsEvt->SetName("trkVsEvt");
+   trkVsEvt->SetTitle("Number of tracks vs event");
+   trkVsEvt->SetMarkerStyle(7);
    TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
@@ -222,7 +226,9 @@ int main(int argc, char* argv[])
    TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
    TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -50.5, 511.5);
    TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
+   TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
    TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
    TGraph* tempEvt = new TGraph();
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
@@ -261,6 +267,7 @@ int main(int argc, char* argv[])
 
    int extraCh = -1; // extrapolated channel number
    double hitCharge = 0; // charge on the hit
+   int hiChargeCh = -1; // extrapolated ch num of the hit with highest charge in the event
    double highestCharge = 0; // highest hit charge in the event (believed to be the particle that passes the detector in time)
    int trackPos = 0; // position of the track in the track vector
    int iBin = 0; // bin to be filled
@@ -296,9 +303,16 @@ int main(int argc, char* argv[])
        else // new event
 	 { // analyze the old event, if there are tracks
 	   analyzeEvent = true;
-	   for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y)
+	   for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y and X) | check the decision procedure!!!!
 	     {
 	       extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
+
+	       if(trkVec.at(iTrk).extraPosDUT[0] <= xCut1 && trkVec.at(iTrk).extraPosDUT[0] >= xCut2) // geom cut in X
+		 {
+		   analyzeEvent = false;
+		   break;
+		 }
+
 	       if(extraCh < 0 || extraCh >= nChannels) // protect array margins (no seg violation hopefully)
 		 {
 		   analyzeEvent = false;
@@ -319,6 +333,7 @@ int main(int argc, char* argv[])
 	   if(analyzeEvent) // all the event tracks in a sensitive part of the sensor and at least one track
 	     {
 	       trkEvt->Fill(nTrks);
+	       trkVsEvt->SetPoint(trkVsEvt->GetN(), evtMrk, nTrks);
 	       for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		 {
 		   extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
@@ -328,51 +343,52 @@ int main(int argc, char* argv[])
 
 		   hitCharge = 0;
 
-		   for(int dist = 0; dist <= maxDist; ++dist) // sum the charge of the strips around the extrapolated value
-		     {
-		       if(dist == 0) hitCharge += evtAliPH[extraCh];
-		       else
-			 {
-			   hitCharge += evtAliPH[extraCh + dist];
-			   hitCharge += evtAliPH[extraCh - dist];
-			 }
-		     }
+		   for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // sum the charge of the strips around the extrapolated value
+		     if(iCh >=0 && iCh < nChannels) // protect array margins
+		       hitCharge += evtAliPH[iCh];
 
 		   if(fabs(hitCharge) > fabs(highestCharge))  // select the highest hit charge
 		     {
 		       highestCharge = hitCharge;
+		       hiChargeCh = extraCh;
 		       trackPos = iTrk;
 		     }
 		 }
 	       // fill histos old event
-	       if(trkVec.at(trackPos).extraPosDUT[0] > xCut1 && trkVec.at(trackPos).extraPosDUT[0] < xCut2)
+	       signalTime->Fill(evtAliTime, highestCharge);
+	       positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
+	       signalDistr->Fill(highestCharge * polarity);
+
+	       for(int iCh = 0; iCh < nChannels; ++iCh)
+	         if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
+		   noiseDistr->Fill(evtAliPH[iCh] * polarity);
+
+	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
 		 {
-		   signalTime->Fill(evtAliTime, highestCharge);
-		   positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
-		   signalDistr->Fill(highestCharge * polarity);
-		   if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
-		     {
-		       signalDistrTimeCut->Fill(highestCharge * polarity);
+		   signalDistrTimeCut->Fill(highestCharge * polarity);
+
+		   for(int iCh = 0; iCh < nChannels; ++iCh)
+		     if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
+		       noiseDistrTimeCut->Fill(evtAliPH[iCh] * polarity);
 		       
-		       // hitmap and charge map mod 160 (on 2 strips)
-		       posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
-		       posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
-		       iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
-		       oldContent = chargeMapMod160->GetBinContent(iBin);
-		       chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		   // hitmap and charge map mod 160 (on 2 strips)
+		   posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
+		   posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		   iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
+		   oldContent = chargeMapMod160->GetBinContent(iBin);
+		   chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
 		       
-		       hitMapMod160->Fill(posX, posY);
+		   hitMapMod160->Fill(posX, posY);
 		       
-		       //hitmap and charge map over the sensor
-		       posX = trkVec.at(trackPos).extraPosDUT[0];
-		       posY = trkVec.at(trackPos).extraPosDUT[1];
-		       iBin = chargeMap->FindBin(posX, posY); // find the bin
-		       oldContent = chargeMap->GetBinContent(iBin);
-		       chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		   //hitmap and charge map over the sensor
+		   posX = trkVec.at(trackPos).extraPosDUT[0];
+		   posY = trkVec.at(trackPos).extraPosDUT[1];
+		   iBin = chargeMap->FindBin(posX, posY); // find the bin
+		   oldContent = chargeMap->GetBinContent(iBin);
+		   chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
 		       
-		       hitMap->Fill(posX, posY);
+		   hitMap->Fill(posX, posY);
 		       
-		     }
 		 }
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
@@ -430,8 +446,8 @@ int main(int argc, char* argv[])
 
    TCanvas* fitCan = new TCanvas("fitCan");
 
-   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
-   gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
+   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
    for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
      {
@@ -501,6 +517,10 @@ int main(int argc, char* argv[])
    TCanvas* servCan = new TCanvas("servCan");
    servCan->cd();
 
+   trkVsEvt->Draw("AP");
+   trkVsEvt->GetXaxis()->SetTitle("Event number");
+   trkVsEvt->GetYaxis()->SetTitle("Number of tracks");
+
    tempEvt->Draw("AP");
    tempEvt->GetXaxis()->SetTitle("Event number");
    tempEvt->GetYaxis()->SetTitle("Temperature [C]");
@@ -526,6 +546,7 @@ int main(int argc, char* argv[])
    outFile->cd();
 
    trkEvt->Write();
+   trkVsEvt->Write();
    hitMapDUTtele->Write();
    hitMapMatched->Write();
    hitMapDUTgoodCh->Write();
@@ -541,7 +562,9 @@ int main(int argc, char* argv[])
    maxLanGauFit->Write();
    chi2SliceFit->Write();
    signalDistr->Write();
+   noiseDistr->Write();
    signalDistrTimeCut->Write();
+   noiseDistrTimeCut->Write();
    tempEvt->Write();
    hitMapMod160->Write();
    chargeMapMod160->Write();
