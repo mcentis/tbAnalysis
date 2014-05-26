@@ -223,16 +223,28 @@ int main(int argc, char* argv[])
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
 
-   // three histos to get a map of charge collection
+   // three histos to get a map of charge collection over 2 strips in the time cut
    double minX = -20000;
    double maxX = 20000;
    int binX = 100;
    double minY = -0.5;
    double maxY = 160.5;
    int binY = 31;
-   TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-   TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-   TH2D* hitMapMod016 = new TH2D("hitMapMod016", "Hit map in the time cut;x [#mum];y mod 0.16 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* chargeMapMod160Normalized = new TH2D("chargeMapMod160Normalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* chargeMapMod160 = new TH2D("chargeMapMod160", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* hitMapMod160 = new TH2D("hitMapMod160", "Hit map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+
+   // charge collection map over the sensor in the time cut
+   minX = -20;
+   maxX = 20;
+   binX = 200;
+   minY = -10;
+   maxY = 10;
+   binY = 100;
+   TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut divided by the number of tracks;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+
 
    int nTrks = 0; // number of tracks in one event
    long int evtMrk = -1; // event marker
@@ -336,13 +348,24 @@ int main(int argc, char* argv[])
 		 {
 		   signalDistrTimeCut->Fill(highestCharge * polarity);
 
+		   // hitmap and charge map mod 160 (on 2 strips)
 		   posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
 		   posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		   iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
+		   oldContent = chargeMapMod160->GetBinContent(iBin);
+		   chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
+
+		   hitMapMod160->Fill(posX, posY);
+
+		   //hitmap and charge map over the sensor
+		   posX = trkVec.at(trackPos).extraPosDUT[0];
+		   posY = trkVec.at(trackPos).extraPosDUT[1];
 		   iBin = chargeMap->FindBin(posX, posY); // find the bin
 		   oldContent = chargeMap->GetBinContent(iBin);
 		   chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
 
-		   hitMapMod016->Fill(posX, posY);
+		   hitMap->Fill(posX, posY);
+
 		 }
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
@@ -432,17 +455,27 @@ int main(int argc, char* argv[])
 
    double chargeSum;
    int nTracks;
+   for(int iBinX = 1; iBinX < chargeMapMod160->GetNbinsX(); ++iBinX)
+     for(int iBinY = 1; iBinY < chargeMapMod160->GetNbinsY(); ++iBinY)
+       {
+	 chargeSum = chargeMapMod160->GetBinContent(iBinX, iBinY);
+	 nTracks = hitMapMod160->GetBinContent(iBinX, iBinY);
+
+	 if(nTracks != 0)
+	   chargeMapMod160Normalized->SetBinContent(iBinX, iBinY, chargeSum / nTracks);
+
+       }
+
    for(int iBinX = 1; iBinX < chargeMap->GetNbinsX(); ++iBinX)
      for(int iBinY = 1; iBinY < chargeMap->GetNbinsY(); ++iBinY)
        {
 	 chargeSum = chargeMap->GetBinContent(iBinX, iBinY);
-	 nTracks = hitMapMod016->GetBinContent(iBinX, iBinY);
+	 nTracks = hitMap->GetBinContent(iBinX, iBinY);
 
 	 if(nTracks != 0)
 	   chargeMapNormalized->SetBinContent(iBinX, iBinY, chargeSum / nTracks);
 
        }
-
 
    // draw graphs to name the axis
    TCanvas* servCan = new TCanvas("servCan");
@@ -489,7 +522,10 @@ int main(int argc, char* argv[])
    signalDistr->Write();
    signalDistrTimeCut->Write();
    tempEvt->Write();
-   hitMapMod016->Write();
+   hitMapMod160->Write();
+   chargeMapMod160->Write();
+   chargeMapMod160Normalized->Write();
+   hitMap->Write();
    chargeMap->Write();
    chargeMapNormalized->Write();
 
