@@ -31,6 +31,26 @@ int findRunNumber(std::string in)
   return atoi(num);
 }
 
+TF1* fitResiduals(TH1* inHist, double range1, double range2)
+{
+   TF1* fitFunc = new TF1("fitFunc", "gaus + [3]", range1, range2);
+   fitFunc->SetParNames("Const", "Mean", "Sigma", "Offset");
+   fitFunc->SetLineColor(kRed);
+   fitFunc->SetParameter(0, inHist->GetMaximum());
+   fitFunc->SetParameter(1, inHist->GetMean()); // the distr is expected to be symmetric
+   fitFunc->SetParameter(2, inHist->GetRMS() * 0.5);
+   fitFunc->SetParameter(3, 0); // no offset
+
+   fitFunc->SetParLimits(0, 0, inHist->GetEntries());
+   fitFunc->SetParLimits(1, inHist->GetMean() - inHist->GetRMS(), inHist->GetMean() + inHist->GetRMS());
+   fitFunc->SetParLimits(2, 0, 2 * inHist->GetRMS());
+   fitFunc->SetParLimits(3, 0, inHist->GetEntries());
+
+   inHist->Fit(fitFunc, "RQ");
+
+   return fitFunc;
+}
+
 int main(int argc, char* argv[])
 {
   gSystem->Load("libTree"); // necessary to use the program, root magic
@@ -218,6 +238,8 @@ int main(int argc, char* argv[])
    trkVsEvt->SetName("trkVsEvt");
    trkVsEvt->SetTitle("Number of tracks vs event");
    trkVsEvt->SetMarkerStyle(7);
+   TH1D* residualsX = new TH1D("residualsX", "Difference between matched cluster and extrapolated position along x;x_{matched} - x_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
+   TH1D* residualsY = new TH1D("residualsY", "Difference between matched cluster and extrapolated position along y;y_{matched} - y_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
    TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
@@ -291,7 +313,12 @@ int main(int argc, char* argv[])
        trk->measPosDUT[1] = dutHitY;
 
        hitMapDUTtele->Fill(dutTrackX, dutTrackY);
-       if(dutHitX > -900 && dutHitY > -900) hitMapMatched->Fill(dutHitX, dutHitY);
+       if(dutHitX > -900 && dutHitY > -900) // if there is a matched hit
+	 {
+	   hitMapMatched->Fill(dutHitX, dutHitY);
+	   residualsX->Fill(dutHitX - dutTrackX);
+	   residualsY->Fill(dutHitY - dutTrackY);
+	 }
        extraChDistr->Fill(dutPixelY);
 
        if(evtMrk == EvtNr)
@@ -446,8 +473,11 @@ int main(int argc, char* argv[])
 
    TCanvas* fitCan = new TCanvas("fitCan");
 
-   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
-   //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
+   fitResiduals(residualsX, -0.5, 0.5);
+   fitResiduals(residualsY, -0.25, 0.25);
+
+   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+   gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
    for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
      {
@@ -547,6 +577,8 @@ int main(int argc, char* argv[])
 
    trkEvt->Write();
    trkVsEvt->Write();
+   residualsX->Write();
+   residualsY->Write();
    hitMapDUTtele->Write();
    hitMapMatched->Write();
    hitMapDUTgoodCh->Write();
