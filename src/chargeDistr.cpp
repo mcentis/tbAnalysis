@@ -64,10 +64,13 @@ int main(int argc, char* argv[])
   const int maxDist = atoi(conf->GetValue("hitMaxDist").c_str()); // maximum distance form the strip hit by a track in looking at the charge, in number of strips
   const float timeCut1 = atof(conf->GetValue("timeCut1").c_str()); // time cut for the events
   const float timeCut2 = atof(conf->GetValue("timeCut2").c_str()); // time cut for the events
+  const float xCut1 = atof(conf->GetValue("xCut1").c_str()); // cut in the x direction, applied on the telescope ref frame
+  const float xCut2 = atof(conf->GetValue("xCut2").c_str()); // cut in the x direction, applied on the telescope ref frame
   int readenPolarity = atoi(conf->GetValue("polarity").c_str()); // expected signal polarity
   const int polarity = readenPolarity / abs(readenPolarity);
   const float negSigmaFit = atof(conf->GetValue("negSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the negative direction
   const float posSigmaFit = atof(conf->GetValue("posSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the positive direction
+
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -342,31 +345,34 @@ int main(int argc, char* argv[])
 		     }
 		 }
 	       // fill histos old event
-	       signalTime->Fill(evtAliTime, highestCharge);
-	       positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
-	       signalDistr->Fill(highestCharge * polarity);
-	       if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2)
+	       if(trkVec.at(trackPos).extraPosDUT[0] > xCut1 && trkVec.at(trackPos).extraPosDUT[0] < xCut2)
 		 {
-		   signalDistrTimeCut->Fill(highestCharge * polarity);
-
-		   // hitmap and charge map mod 160 (on 2 strips)
-		   posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
-		   posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
-		   iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
-		   oldContent = chargeMapMod160->GetBinContent(iBin);
-		   chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
-
-		   hitMapMod160->Fill(posX, posY);
-
-		   //hitmap and charge map over the sensor
-		   posX = trkVec.at(trackPos).extraPosDUT[0];
-		   posY = trkVec.at(trackPos).extraPosDUT[1];
-		   iBin = chargeMap->FindBin(posX, posY); // find the bin
-		   oldContent = chargeMap->GetBinContent(iBin);
-		   chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
-
-		   hitMap->Fill(posX, posY);
-
+		   signalTime->Fill(evtAliTime, highestCharge);
+		   positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
+		   signalDistr->Fill(highestCharge * polarity);
+		   if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
+		     {
+		       signalDistrTimeCut->Fill(highestCharge * polarity);
+		       
+		       // hitmap and charge map mod 160 (on 2 strips)
+		       posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
+		       posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		       iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
+		       oldContent = chargeMapMod160->GetBinContent(iBin);
+		       chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		       
+		       hitMapMod160->Fill(posX, posY);
+		       
+		       //hitmap and charge map over the sensor
+		       posX = trkVec.at(trackPos).extraPosDUT[0];
+		       posY = trkVec.at(trackPos).extraPosDUT[1];
+		       iBin = chargeMap->FindBin(posX, posY); // find the bin
+		       oldContent = chargeMap->GetBinContent(iBin);
+		       chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		       
+		       hitMap->Fill(posX, posY);
+		       
+		     }
 		 }
 	       tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	     } // the analysis of the event should be contained in this scope
