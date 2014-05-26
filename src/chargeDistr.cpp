@@ -240,6 +240,9 @@ int main(int argc, char* argv[])
    trkVsEvt->SetMarkerStyle(7);
    TH1D* residualsX = new TH1D("residualsX", "Difference between matched cluster and extrapolated position along x;x_{matched} - x_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
    TH1D* residualsY = new TH1D("residualsY", "Difference between matched cluster and extrapolated position along y;y_{matched} - y_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
+   TH2D* residuals = new TH2D("residuals", "Difference between matched cluster and extrapolated position;x_{matched} - x_{etrapolated} [mm];y_{matched} - y_{etrapolated} [mm];Entries", 501, -1.5, 1.5, 501, -1.5, 1.5);
+   TH2D* residualsXvsX = new TH2D("residualsXvsX", "Difference between matched cluster and extrapolated position along x as function of x;x_{etrapolated} [mm];x_{matched} - x_{etrapolated} [mm];Entries", 501, -20, 20, 501, -1.5, 1.5);
+   TH2D* residualsYvsY = new TH2D("residualsYvsY", "Difference between matched cluster and extrapolated position along y as function of y;y_{etrapolated} [mm];y_{matched} - y_{etrapolated} [mm];Entries", 501, -10, 10, 501, -1.5, 1.5);
    TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
@@ -318,6 +321,9 @@ int main(int argc, char* argv[])
 	   hitMapMatched->Fill(dutHitX, dutHitY);
 	   residualsX->Fill(dutHitX - dutTrackX);
 	   residualsY->Fill(dutHitY - dutTrackY);
+	   residuals->Fill(dutHitX - dutTrackX, dutHitY - dutTrackY);
+	   residualsXvsX->Fill(dutTrackX, dutHitX - dutTrackX);
+	   residualsYvsY->Fill(dutTrackY, dutHitY - dutTrackY);
 	 }
        extraChDistr->Fill(dutPixelY);
 
@@ -587,6 +593,9 @@ int main(int argc, char* argv[])
    trkVsEvt->Write();
    residualsX->Write();
    residualsY->Write();
+   residuals->Write();
+   residualsXvsX->Write();
+   residualsYvsY->Write();
    hitMapDUTtele->Write();
    hitMapMatched->Write();
    hitMapDUTgoodCh->Write();
