@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
   const int polarity = readenPolarity / abs(readenPolarity);
   const float negSigmaFit = atof(conf->GetValue("negSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the negative direction
   const float posSigmaFit = atof(conf->GetValue("posSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the positive direction
-
+  int maxEntryNum = atoi(conf->GetValue("maxEntryNum").c_str());
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -231,7 +231,6 @@ int main(int argc, char* argv[])
    trkTree->SetBranchStatus("dutHitX", 1);
    trkTree->SetBranchStatus("dutHitY", 1);
 
-   long int nEntries = trkTree->GetEntries();
    // tracks
    TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 11, -0.5, 10.5);
    TGraph* trkVsEvt = new TGraph();
@@ -312,7 +311,12 @@ int main(int argc, char* argv[])
 
    bool analyzeEvent = false;
 
-   for(int i = 0; i < nEntries; ++i)
+   long int nEntries = trkTree->GetEntries();
+
+   if(maxEntryNum == 0 || maxEntryNum > nEntries) // if there is a maximum number of entries
+     maxEntryNum = nEntries;
+
+   for(int i = 0; i < maxEntryNum; ++i)
      {
        trkTree->GetEntry(i);
 
