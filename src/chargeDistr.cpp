@@ -90,7 +90,8 @@ int main(int argc, char* argv[])
   const int polarity = readenPolarity / abs(readenPolarity);
   const float negSigmaFit = atof(conf->GetValue("negSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the negative direction
   const float posSigmaFit = atof(conf->GetValue("posSigmaFit").c_str()); // number of sigma to which extend the landau gaussian fit in the positive direction
-  int maxEntryNum = atoi(conf->GetValue("maxEntryNum").c_str());
+  int maxEntryNum = atoi(conf->GetValue("maxEntryNum").c_str()); // max entry number to be processed
+  int highestNeighbor = atoi(conf->GetValue("highestNeighbor").c_str()); // if not 0 only the highest neighbor is added to the hit charge
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -374,7 +375,7 @@ int main(int argc, char* argv[])
 		   analyzeEvent = false;
 		   break;
 		 }
-	     }
+	     } // geometry cuts to be fullfilled by all the tracks
 
 	   if(analyzeEvent && trkVec.size() != 0) analyzeEvent = true; // check that there is at least a track 
 	   else analyzeEvent = false;
@@ -392,9 +393,19 @@ int main(int argc, char* argv[])
 
 		   hitCharge = 0;
 
-		   for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // sum the charge of the strips around the extrapolated value
-		     if(iCh >=0 && iCh < nChannels) // protect array margins
-		       hitCharge += evtAliPH[iCh];
+		   if(highestNeighbor) // if the variable is not 0, just the neighbor with the highest charge is added to the hit
+		     {
+		       if(fabs(evtAliPH[extraCh + 1]) > fabs(evtAliPH[extraCh - 1]))
+			 hitCharge = evtAliPH[extraCh + 1] + evtAliPH[extraCh];
+		       else
+			 hitCharge = evtAliPH[extraCh - 1] + evtAliPH[extraCh];
+		     }
+		   else
+		     {
+		       for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // sum the charge of the strips around the extrapolated value
+			 if(iCh >=0 && iCh < nChannels) // protect array margins
+			   hitCharge += evtAliPH[iCh];
+		     }
 
 		   if(fabs(hitCharge) > fabs(highestCharge))  // select the highest hit charge
 		     {
