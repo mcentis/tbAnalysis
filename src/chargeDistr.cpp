@@ -352,7 +352,7 @@ int main(int argc, char* argv[])
 	     {
 	       extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
 
-	       if(trkVec.at(iTrk).extraPosDUT[0] <= xCut1 && trkVec.at(iTrk).extraPosDUT[0] >= xCut2) // geom cut in X
+	       if(trkVec.at(iTrk).extraPosDUT[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT[0] >= xCut2) // geom cut in X
 		 {
 		   analyzeEvent = false;
 		   break;
