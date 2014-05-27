@@ -232,28 +232,38 @@ int main(int argc, char* argv[])
    trkTree->SetBranchStatus("dutHitY", 1);
 
    long int nEntries = trkTree->GetEntries();
-
+   // tracks
    TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 11, -0.5, 10.5);
    TGraph* trkVsEvt = new TGraph();
    trkVsEvt->SetName("trkVsEvt");
    trkVsEvt->SetTitle("Number of tracks vs event");
    trkVsEvt->SetMarkerStyle(7);
+
+   // residuals
    TH1D* residualsX = new TH1D("residualsX", "Difference between matched cluster and extrapolated position along x;x_{matched} - x_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
    TH1D* residualsY = new TH1D("residualsY", "Difference between matched cluster and extrapolated position along y;y_{matched} - y_{etrapolated} [mm];Entries", 501, -1.5, 1.5);
    TH2D* residuals = new TH2D("residuals", "Difference between matched cluster and extrapolated position;x_{matched} - x_{etrapolated} [mm];y_{matched} - y_{etrapolated} [mm];Entries", 501, -1.5, 1.5, 501, -1.5, 1.5);
    TH2D* residualsXvsX = new TH2D("residualsXvsX", "Difference between matched cluster and extrapolated position along x as function of x;x_{etrapolated} [mm];x_{matched} - x_{etrapolated} [mm];Entries", 501, -20, 20, 501, -1.5, 1.5);
    TH2D* residualsYvsY = new TH2D("residualsYvsY", "Difference between matched cluster and extrapolated position along y as function of y;y_{etrapolated} [mm];y_{matched} - y_{etrapolated} [mm];Entries", 501, -10, 10, 501, -1.5, 1.5);
+   TH2D* residualsYvsX = new TH2D("residualsYvsX", "Difference between matched cluster and extrapolated position along y as function of x;x_{etrapolated} [mm];y_{matched} - y_{etrapolated} [mm];Entries", 501, -20, 20, 501, -1.5, 1.5);
+   TH2D* residualsXvsY = new TH2D("residualsXvsY", "Difference between matched cluster and extrapolated position along x as function of y;y_{etrapolated} [mm];x_{matched} - x_{etrapolated} [mm];Entries", 501, -10, 10, 501, -1.5, 1.5);
+
+   // hitmaps
    TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapMatched = new TH2D("hitMapMatched", "Matched hits on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
    TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
    TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
+
+   // signal and noise
    TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
    TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -50.5, 511.5);
    TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
    TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
    TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
    TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
+
+   // chip temperature
    TGraph* tempEvt = new TGraph();
    tempEvt->SetName("tempEvt");
    tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
@@ -324,6 +334,8 @@ int main(int argc, char* argv[])
 	   residuals->Fill(dutHitX - dutTrackX, dutHitY - dutTrackY);
 	   residualsXvsX->Fill(dutTrackX, dutHitX - dutTrackX);
 	   residualsYvsY->Fill(dutTrackY, dutHitY - dutTrackY);
+	   residualsXvsY->Fill(dutTrackY, dutHitX - dutTrackX);
+	   residualsYvsX->Fill(dutTrackX, dutHitY - dutTrackY);
 	 }
        extraChDistr->Fill(dutPixelY);
 
@@ -444,6 +456,15 @@ int main(int argc, char* argv[])
 
    TProfile* positivizedSignalTimeProfile = positivizedSignalTime->ProfileX("positivizedSignalTimeProfile");
    positivizedSignalTimeProfile->SetTitle("Positivized signal time profile");
+
+   TProfile* profileResYvsY = residualsYvsY->ProfileX("profileResYvsY");
+   profileResYvsY->SetTitle("Profile histo of the residuals along y vs y");
+   TProfile* profileResXvsX = residualsXvsX->ProfileX("profileResXvsX");
+   profileResXvsX->SetTitle("Profile histo of the residuals along x vs x");
+   TProfile* profileResYvsX = residualsYvsX->ProfileX("profileResYvsX");
+   profileResYvsX->SetTitle("Profile histo of the residuals along y vs x");
+   TProfile* profileResXvsY = residualsXvsY->ProfileX("profileResXvsY");
+   profileResXvsY->SetTitle("Profile histo of the residuals along x vs y");
 
    TDirectory* timeSlicesDir = outFile->mkdir("timeSlices");
    timeSlicesDir->cd();   
@@ -591,11 +612,22 @@ int main(int argc, char* argv[])
 
    trkEvt->Write();
    trkVsEvt->Write();
+
+   TDirectory* resDir = outFile->mkdir("Residuals");
+   resDir->cd();
    residualsX->Write();
    residualsY->Write();
    residuals->Write();
    residualsXvsX->Write();
+   profileResXvsX->Write();
    residualsYvsY->Write();
+   profileResYvsY->Write();
+   residualsXvsY->Write();
+   profileResXvsY->Write();
+   residualsYvsX->Write();
+   profileResYvsX->Write();
+
+   outFile->cd();
    hitMapDUTtele->Write();
    hitMapMatched->Write();
    hitMapDUTgoodCh->Write();
