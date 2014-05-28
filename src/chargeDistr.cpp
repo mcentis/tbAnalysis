@@ -578,7 +578,7 @@ int main(int argc, char* argv[])
       if(fit->GetMaximumX() > -200) // exclude nonsense
 	maxLanGauFit->SetPoint(maxLanGauFit->GetN(), time, fit->GetMaximumX());
 
-      if(fit->GetChisquare() > 0 && fit->GetNDF() > 0) // avoid to put nonsense in the graph
+      if(fit->GetChisquare() > 0 && fit->GetChisquare() < 1e6 && fit->GetNDF() > 0) // avoid to put nonsense in the graph
 	chi2SliceFit->SetPoint(chi2SliceFit->GetN(), time, fit->GetChisquare() / fit->GetNDF());
 
       slice->Write();
