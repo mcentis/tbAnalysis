@@ -111,7 +111,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   TF1* gausFit = new TF1(name, "gaus", histMax - halfRange, histMax + halfRange);
   gausFit->SetLineColor(kBlue);
 
-  inHist->Fit(gausFit, "RQ");
+  inHist->Fit(gausFit, "RQL");
 
   double* Gpar = gausFit->GetParameters();
 
@@ -182,7 +182,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
       ffit->SetParLimits(i, pllo[i], plhi[i]);
     }
 
-  inHist->Fit(ffit,"RQ"); // fit within specified range
+  inHist->Fit(ffit,"RQL"); // fit within specified range
 
   return ffit;
 }
@@ -198,7 +198,7 @@ Double_t gausLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau g
 TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
 {
   TF1* gausFunc = new TF1("gausFunc", "gaus", -30, 5); // referred as g0 in the next comments
-  inHist->Fit(gausFunc, "RQ");
+  inHist->Fit(gausFunc, "RQL");
 
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
 
@@ -237,7 +237,7 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
   for(int i = 0; i < nPars; ++i)
     gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
 
-  inHist->Fit(gausLang, "R");
+  inHist->Fit(gausLang, "RL");
 
   return gausLang;
 }
@@ -287,7 +287,7 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
   for(int i = 0; i < nPars; ++i)
     gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
 
-  inHist->Fit(gausLang, "R");
+  inHist->Fit(gausLang, "RL");
 
   return gausLang;
 }

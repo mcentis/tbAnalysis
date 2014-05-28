@@ -567,8 +567,12 @@ int main(int argc, char* argv[])
 
       for(int iPar = 0; iPar < nPars; ++iPar)
 	{
-	  lanGausParVsTime[iPar]->SetPoint(iBin - 1, time, fit->GetParameter(iPar));
-	  lanGausParVsTime[iPar]->SetPointError(iBin - 1, binW / 2, fit->GetParError(iPar));
+	  if(fit->GetParameter(iPar) > -200)
+	    {
+	      //std::cout << iPar << "   " <<  fit->GetParameter(iPar) << "  +-  " << fit->GetParError(iPar) << std::endl;
+	      lanGausParVsTime[iPar]->SetPoint(lanGausParVsTime[iPar]->GetN(), time, fit->GetParameter(iPar));
+	      lanGausParVsTime[iPar]->SetPointError(lanGausParVsTime[iPar]->GetN() - 1, binW / 2, fit->GetParError(iPar));
+	    }
 	}
 
       if(fit->GetMaximumX() > -200) // exclude nonsense
