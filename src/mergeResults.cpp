@@ -56,6 +56,7 @@ int main(int argc, char* argv[])
   std::cout << "If too many sensors appear, have a look for empty lines in the lists" << std::endl;
 
   std::vector<TGraphErrors*> mpvBiasVec;
+  std::vector<TGraphErrors*> noiseBiasVec;
   std::vector<double> bias;
   std::vector<double> angle;
   std::vector<int> run;
@@ -67,7 +68,9 @@ int main(int argc, char* argv[])
   TFile* inFile;
   TH1* chDistr;
   TF1* func;
+  TH1* noiseDistr;
   TGraphErrors* mpvGr;
+  TGraphErrors* noiseGr;
 
   char name[200];
   char title[500];
@@ -102,7 +105,7 @@ int main(int argc, char* argv[])
 	std::cout << bias.at(j) << '\t' << angle.at(j) << '\t' << run.at(j) << std::endl;
       std::cout << "If too many runs appear, have a look for empty lines in the lists" << std::endl;
 
-      sprintf(name, "%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(name, "mpv_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       mpvGr = new TGraphErrors();
       mpvGr->SetName(name);
@@ -115,6 +118,18 @@ int main(int argc, char* argv[])
       mpvGr->SetLineStyle(linStyle);
       mpvGr->SetLineWidth(2);
 
+      sprintf(name, "noise_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      noiseGr = new TGraphErrors();
+      noiseGr->SetName(name);
+      noiseGr->SetTitle(title);
+      noiseGr->SetMarkerStyle(8);
+      noiseGr->SetFillColor(kWhite);
+      noiseGr->SetLineColor(i % 9 + 1); // set line color and style
+      noiseGr->SetMarkerColor(i % 9 + 1);
+      noiseGr->SetLineStyle(linStyle);
+      noiseGr->SetLineWidth(2);
+
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
 	{
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
@@ -126,17 +141,27 @@ int main(int argc, char* argv[])
 	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(1));
 	  mpvGr->SetPointError(iRun, 0, func->GetParError(1));
 
+	  noiseDistr =  (TH1*) inFile->Get("fittedNoiseDistr");
+
+	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
+	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS());
+
 	  inFile->Close();
 	} // loop on the runs for a sensor
 
 
       mpvBiasVec.push_back(mpvGr);
+      noiseBiasVec.push_back(noiseGr);
 
     } // loop on the sensors
 
-  TMultiGraph* allSensors = new TMultiGraph();
-  allSensors->SetName("allSensors");
-  allSensors->SetTitle("MPV vs bias");
+  TMultiGraph* mpvAllSensors = new TMultiGraph();
+  mpvAllSensors->SetName("mpvAllSensors");
+  mpvAllSensors->SetTitle("MPV vs bias");
+
+  TMultiGraph* noiseAllSensors = new TMultiGraph();
+  noiseAllSensors->SetName("noiseAllSensors");
+  noiseAllSensors->SetTitle("Noise vs bias");
 
   TCanvas* servCan = new TCanvas();
   servCan->SetName("servCan");
@@ -147,27 +172,52 @@ int main(int argc, char* argv[])
       mpvBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
       mpvBiasVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC]");
 
-      allSensors->Add(mpvBiasVec.at(i));
+      mpvAllSensors->Add(mpvBiasVec.at(i));
     }
 
-  allSensors->Draw("AP");
-  allSensors->GetXaxis()->SetTitle("Bias [V]");
-  allSensors->GetYaxis()->SetTitle("Landau MPV [ADC]");
+  mpvAllSensors->Draw("AP");
+  mpvAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  mpvAllSensors->GetYaxis()->SetTitle("Landau MPV [ADC]");
+
+  for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
+    {
+      noiseBiasVec.at(i)->Draw("AP");
+      noiseBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      noiseBiasVec.at(i)->GetYaxis()->SetTitle("Noise [ADC]");
+
+      noiseAllSensors->Add(noiseBiasVec.at(i));
+    }
+
+  noiseAllSensors->Draw("AP");
+  noiseAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC]");
 
   delete servCan;
 
   outFile->cd();
   for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
     mpvBiasVec.at(i)->Write();
-  allSensors->Write();
+  mpvAllSensors->Write();
 
-  TCanvas* allSenCan = new TCanvas("allSenCan");
-  allSensors->Draw("APL");
-  TLegend* leg = allSenCan->BuildLegend();
+  TCanvas* mpvAllSenCan = new TCanvas("mpvAllSenCan");
+  mpvAllSensors->Draw("APL");
+  TLegend* leg = mpvAllSenCan->BuildLegend();
   leg->SetFillColor(kWhite);
-  allSenCan->Modified();
-  allSenCan->Update();
-  allSenCan->Write();
+  mpvAllSenCan->Modified();
+  mpvAllSenCan->Update();
+  mpvAllSenCan->Write();
+
+  for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
+    noiseBiasVec.at(i)->Write();
+  noiseAllSensors->Write();
+
+  TCanvas* noiseAllSenCan = new TCanvas("noiseAllSenCan");
+  noiseAllSensors->Draw("APL");
+  leg = noiseAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  noiseAllSenCan->Modified();
+  noiseAllSenCan->Update();
+  noiseAllSenCan->Write();
 
   outFile->Close();
 
