@@ -15,6 +15,7 @@ struct track
   bool recHit[nTelPlanes + 1]; // true if a hit was found in the plane, +1 for DUT
   int ndf; // degrees of freedom of the track fit
   double chi2; // chi2 of the track fit
+  long int entryNum; // entry number in the track root tree
 
   track() // default constructor
   {
@@ -38,6 +39,7 @@ struct track
 
     ndf = 0;
     chi2 = 0;
+    entryNum = -1;
   };
 
 };

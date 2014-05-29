@@ -70,6 +70,8 @@ int main(int argc, char* argv[])
 
   const int nChannels = 256;
   const double pitch = 0.080; // mm
+  char name[50]; // to be used in varios occasions
+  char title[200];
 
   TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
   TTree* trkTree = (TTree*) dir->Get("EUFit");
@@ -214,7 +216,6 @@ int main(int argc, char* argv[])
   trkTree->SetBranchAddress("alibava_tdc",&alibava_TDC);
   trkTree->SetBranchAddress("alibava_temp",&alibava_temp);
 
-  char name[50];
   for(int i = 0; i < nChannels; ++i)
     {
       sprintf(name, "alibava_reco_ch_%i", i);
@@ -293,6 +294,14 @@ int main(int argc, char* argv[])
   TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
+  TH1D* noiseHistCh[nChannels]; // calculation of the noise
+  for(int i = 0; i < nChannels; ++i)
+    {
+      sprintf(name, "noiseDistrChannel_%i", i);
+      sprintf(title, "Signal distribution (positivized) not associated with a hit, channel %i;Signal [ADC];Entries", i);
+      noiseHistCh[i] = new TH1D(name, title, 111, -40.5, 40.5);
+    }
+  TH1D* fittedNoiseDistr = new TH1D("fittedNoiseDistr", "Distribution of the fitted noise;Noise [ADC];Entries", 61, -0.5, 20.5);
 
   int nTrks = 0; // number of tracks in one event
   long int evtMrk = -1; // event marker
@@ -332,19 +341,9 @@ int main(int argc, char* argv[])
       trk->extraPosDUTpix[1] = dutPixelY;
       trk->measPosDUT[0] = dutHitX;
       trk->measPosDUT[1] = dutHitY;
+      trk->entryNum = i; 
 
       hitMapDUTtele->Fill(dutTrackX, dutTrackY);
-      if(dutHitX > -900 && dutHitY > -900) // if there is a matched hit
-      	{
-	  residualsYvsEntry->Fill(i, dutHitY - dutTrackY);
-	  // residualsX->Fill(dutHitX - dutTrackX);
-	  // residualsY->Fill(dutHitY - dutTrackY);
-	  // residuals->Fill(dutHitX - dutTrackX, dutHitY - dutTrackY);
-	  // residualsXvsX->Fill(dutTrackX, dutHitX - dutTrackX);
-	  // residualsYvsY->Fill(dutTrackY, dutHitY - dutTrackY);
-	  // residualsXvsY->Fill(dutTrackY, dutHitX - dutTrackX);
-	  // residualsYvsX->Fill(dutTrackX, dutHitY - dutTrackY);
-	}
       extraChDistr->Fill(dutPixelY);
 
       if(evtMrk == EvtNr)
@@ -363,6 +362,7 @@ int main(int argc, char* argv[])
 		{
 		  if(trkVec.at(iTrk).measPosDUT[0] > -900 && trkVec.at(iTrk).measPosDUT[1] > -900) // if there is a matched hit
 		    {
+		      residualsYvsEntry->Fill(trkVec.at(iTrk).entryNum, trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
 		      hitMapMatched->Fill(trkVec.at(iTrk).measPosDUT[0], trkVec.at(iTrk).measPosDUT[1]);
 		      residualsX->Fill(trkVec.at(iTrk).measPosDUT[0] - trkVec.at(iTrk).extraPosDUT[0]);
 		      residualsY->Fill(trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
@@ -444,7 +444,10 @@ int main(int argc, char* argv[])
 
 	      for(int iCh = 0; iCh < nChannels; ++iCh)
 		if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
-		  noiseDistr->Fill(evtAliPH[iCh] * polarity);
+		  {
+		    noiseDistr->Fill(evtAliPH[iCh] * polarity);
+		    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
+		  }
 
 	      if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
 		{
@@ -490,7 +493,7 @@ int main(int argc, char* argv[])
 	}
 
       delete trk;
-    }
+    } // loop on the tracks (entries in the tree)
 
   TProfile* positivizedSignalTimeProfile = positivizedSignalTime->ProfileX("positivizedSignalTimeProfile");
   positivizedSignalTimeProfile->SetTitle("Positivized signal time profile");
@@ -534,7 +537,6 @@ int main(int argc, char* argv[])
   double binW = 0;
   TH1D* slice = NULL;
   TF1* fit = NULL;
-  char title[200];
 
   TCanvas* fitCan = new TCanvas("fitCan");
 
@@ -583,6 +585,38 @@ int main(int argc, char* argv[])
 
       slice->Write();
     }
+
+  TGraphErrors* noiseMeanCh = new TGraphErrors();
+  noiseMeanCh->SetName("noiseMeanCh");
+  noiseMeanCh->SetTitle("Mean of the noise fit vs channel");
+  noiseMeanCh->SetMarkerStyle(8);
+
+  TGraphErrors* noiseCh = new TGraphErrors();
+  noiseCh->SetName("noiseCh");
+  noiseCh->SetTitle("Sigma of the noise fit vs channel");
+  noiseCh->SetMarkerStyle(8);
+
+  TGraph* noiseChiCh = new TGraph();
+  noiseChiCh->SetName("noiseChiCh");
+  noiseChiCh->SetTitle("#chi^{2} / ndf of the noise fit vs channel");
+  noiseChiCh->SetMarkerStyle(8);
+
+  for(int i = 0; i < nChannels; ++i) // fit of the noise distribution for all the channels
+    if(noiseHistCh[i]->GetEntries() != 0)
+      {
+	fit = new TF1("gausFit", "gaus", noiseHistCh[i]->GetMean() - 3 * noiseHistCh[i]->GetRMS(), noiseHistCh[i]->GetMean() + 2 * noiseHistCh[i]->GetRMS());
+	noiseHistCh[i]->Fit(fit, "RQ");
+
+	noiseMeanCh->SetPoint(noiseMeanCh->GetN(), i, fit->GetParameter(1));
+	noiseMeanCh->SetPointError(noiseMeanCh->GetN() - 1, 0, fit->GetParError(1));
+
+	noiseCh->SetPoint(noiseCh->GetN(), i, fit->GetParameter(2));
+	noiseCh->SetPointError(noiseCh->GetN() - 1, 0, fit->GetParError(2));
+
+	noiseChiCh->SetPoint(noiseChiCh->GetN(), i, fit->GetChisquare() / fit->GetNDF());
+
+	fittedNoiseDistr->Fill(fit->GetParameter(2));
+      }
 
   delete fitCan;
 
@@ -648,6 +682,18 @@ int main(int argc, char* argv[])
   chi2SliceFit->GetXaxis()->SetTitle("Time [ns]");
   chi2SliceFit->GetYaxis()->SetTitle("#chi^{2} / ndf");
 
+  noiseMeanCh->Draw("AP");
+  noiseMeanCh->GetXaxis()->SetTitle("Channel number");
+  noiseMeanCh->GetYaxis()->SetTitle("Mean [ADC]");
+
+  noiseCh->Draw("AP");
+  noiseCh->GetXaxis()->SetTitle("Channel number");
+  noiseCh->GetYaxis()->SetTitle("Sigma [ADC]");
+
+  noiseChiCh->Draw("AP");
+  noiseChiCh->GetXaxis()->SetTitle("Channel number");
+  noiseChiCh->GetYaxis()->SetTitle("#chi^{2} / ndf [ADC]");
+
   delete servCan;
 
   outFile->cd();
@@ -702,6 +748,17 @@ int main(int argc, char* argv[])
   chargeMapNormalized->Write();
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
+
+  TDirectory* noiseDir = outFile->mkdir("noiseChannels");
+  noiseDir->cd();
+  for(int i = 0; i < nChannels; ++i)
+    noiseHistCh[i]->Write();
+
+  outFile->cd();
+  noiseMeanCh->Write();
+  noiseCh->Write();
+  noiseChiCh->Write();
+  fittedNoiseDistr->Write();
 
   outFile->Close();
 
