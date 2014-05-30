@@ -155,6 +155,53 @@ int main(int argc, char* argv[])
 
     } // loop on the sensors
 
+  std::vector<TGraphErrors*> snrBiasVec;
+  TGraphErrors* snrGr;
+
+  double* bia;
+  double* mpv;
+  double* errMpv;
+  double* noise;
+  double* errNoise;
+
+  double snr;
+  double errSnr;
+
+  for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
+    {
+      sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      snrGr = new TGraphErrors();
+      snrGr->SetName(name);
+      snrGr->SetTitle(title);
+      snrGr->SetMarkerStyle(8);
+      snrGr->SetFillColor(kWhite);
+      snrGr->SetLineColor(i % 9 + 1); // set line color and style
+      snrGr->SetMarkerColor(i % 9 + 1);
+      snrGr->SetLineStyle(linStyle);
+      snrGr->SetLineWidth(2);
+
+      mpvGr = mpvBiasVec.at(i);
+      noiseGr = noiseBiasVec.at(i);
+
+      bia = mpvGr->GetX();
+      mpv = mpvGr->GetY();
+      errMpv = mpvGr->GetEY();
+      noise = noiseGr->GetY();
+      errNoise = noiseGr->GetEY();
+
+      for(int iPoint = 0; iPoint < mpvGr->GetN(); ++iPoint)
+      	{
+      	  snr = mpv[iPoint] / noise[iPoint];
+      	  errSnr = snr * sqrt(pow(errMpv[iPoint] / mpv[iPoint], 2) + pow(errNoise[iPoint] / noise[iPoint], 2));
+
+      	  snrGr->SetPoint(iPoint, bia[iPoint], snr);
+      	  snrGr->SetPointError(iPoint, 0, errSnr);
+      	}
+
+      snrBiasVec.push_back(snrGr);
+    } // loop on the sensors
+
   TMultiGraph* mpvAllSensors = new TMultiGraph();
   mpvAllSensors->SetName("mpvAllSensors");
   mpvAllSensors->SetTitle("MPV vs bias");
@@ -162,6 +209,10 @@ int main(int argc, char* argv[])
   TMultiGraph* noiseAllSensors = new TMultiGraph();
   noiseAllSensors->SetName("noiseAllSensors");
   noiseAllSensors->SetTitle("Noise vs bias");
+
+  TMultiGraph* snrAllSensors = new TMultiGraph();
+  snrAllSensors->SetName("snrAllSensors");
+  snrAllSensors->SetTitle("SNR vs bias");
 
   TCanvas* servCan = new TCanvas();
   servCan->SetName("servCan");
@@ -192,6 +243,19 @@ int main(int argc, char* argv[])
   noiseAllSensors->GetXaxis()->SetTitle("Bias [V]");
   noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC]");
 
+  for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
+    {
+      snrBiasVec.at(i)->Draw("AP");
+      snrBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      snrBiasVec.at(i)->GetYaxis()->SetTitle("SNR");
+
+      snrAllSensors->Add(snrBiasVec.at(i));
+    }
+
+  snrAllSensors->Draw("AP");
+  snrAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  snrAllSensors->GetYaxis()->SetTitle("SNR");
+
   delete servCan;
 
   outFile->cd();
@@ -218,6 +282,18 @@ int main(int argc, char* argv[])
   noiseAllSenCan->Modified();
   noiseAllSenCan->Update();
   noiseAllSenCan->Write();
+
+  for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
+    snrBiasVec.at(i)->Write();
+  snrAllSensors->Write();
+
+  TCanvas* snrAllSenCan = new TCanvas("snrAllSenCan");
+  snrAllSensors->Draw("APL");
+  leg = snrAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  snrAllSenCan->Modified();
+  snrAllSenCan->Update();
+  snrAllSenCan->Write();
 
   outFile->Close();
 
