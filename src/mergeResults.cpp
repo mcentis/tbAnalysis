@@ -75,6 +75,7 @@ int main(int argc, char* argv[])
   char name[200];
   char title[500];
   int linStyle = 0;
+  int iColor = 0; // color of the graphs
 
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
@@ -112,9 +113,11 @@ int main(int argc, char* argv[])
       mpvGr->SetTitle(title);
       mpvGr->SetMarkerStyle(8);
       mpvGr->SetFillColor(kWhite);
-      mpvGr->SetLineColor(i % 9 + 1); // set line color and style
-      mpvGr->SetMarkerColor(i % 9 + 1);
-      if(i % 9 == 0) linStyle++;
+      iColor = i % 9 + 1;
+      if(iColor == 5) ++iColor; // skip yellow
+      mpvGr->SetLineColor(iColor); // set line color and style
+      mpvGr->SetMarkerColor(iColor);
+      if(iColor - 1 == 0) linStyle++;
       mpvGr->SetLineStyle(linStyle);
       mpvGr->SetLineWidth(2);
 
@@ -125,8 +128,8 @@ int main(int argc, char* argv[])
       noiseGr->SetTitle(title);
       noiseGr->SetMarkerStyle(8);
       noiseGr->SetFillColor(kWhite);
-      noiseGr->SetLineColor(i % 9 + 1); // set line color and style
-      noiseGr->SetMarkerColor(i % 9 + 1);
+      noiseGr->SetLineColor(iColor); // set line color and style
+      noiseGr->SetMarkerColor(iColor);
       noiseGr->SetLineStyle(linStyle);
       noiseGr->SetLineWidth(2);
 
@@ -169,6 +172,9 @@ int main(int argc, char* argv[])
 
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
+      mpvGr = mpvBiasVec.at(i);
+      noiseGr = noiseBiasVec.at(i);
+
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       snrGr = new TGraphErrors();
@@ -176,13 +182,10 @@ int main(int argc, char* argv[])
       snrGr->SetTitle(title);
       snrGr->SetMarkerStyle(8);
       snrGr->SetFillColor(kWhite);
-      snrGr->SetLineColor(i % 9 + 1); // set line color and style
-      snrGr->SetMarkerColor(i % 9 + 1);
-      snrGr->SetLineStyle(linStyle);
+      snrGr->SetLineColor(mpvGr->GetLineColor()); // set line color and style
+      snrGr->SetMarkerColor(mpvGr->GetMarkerColor());
+      snrGr->SetLineStyle(mpvGr->GetLineStyle());
       snrGr->SetLineWidth(2);
-
-      mpvGr = mpvBiasVec.at(i);
-      noiseGr = noiseBiasVec.at(i);
 
       bia = mpvGr->GetX();
       mpv = mpvGr->GetY();
@@ -267,6 +270,8 @@ int main(int argc, char* argv[])
   mpvAllSensors->Draw("APL");
   TLegend* leg = mpvAllSenCan->BuildLegend();
   leg->SetFillColor(kWhite);
+  mpvAllSenCan->SetGridx();
+  mpvAllSenCan->SetGridy();
   mpvAllSenCan->Modified();
   mpvAllSenCan->Update();
   mpvAllSenCan->Write();
@@ -279,6 +284,8 @@ int main(int argc, char* argv[])
   noiseAllSensors->Draw("APL");
   leg = noiseAllSenCan->BuildLegend();
   leg->SetFillColor(kWhite);
+  noiseAllSenCan->SetGridx();
+  noiseAllSenCan->SetGridy();
   noiseAllSenCan->Modified();
   noiseAllSenCan->Update();
   noiseAllSenCan->Write();
@@ -291,6 +298,8 @@ int main(int argc, char* argv[])
   snrAllSensors->Draw("APL");
   leg = snrAllSenCan->BuildLegend();
   leg->SetFillColor(kWhite);
+  snrAllSenCan->SetGridx();
+  snrAllSenCan->SetGridy();
   snrAllSenCan->Modified();
   snrAllSenCan->Update();
   snrAllSenCan->Write();
