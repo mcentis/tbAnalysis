@@ -57,6 +57,7 @@ int main(int argc, char* argv[])
 
   std::vector<TGraphErrors*> mpvBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec;
+  std::vector<TGraphErrors*> resYBiasVec;
   std::vector<double> bias;
   std::vector<double> angle;
   std::vector<int> run;
@@ -69,8 +70,11 @@ int main(int argc, char* argv[])
   TH1* chDistr;
   TF1* func;
   TH1* noiseDistr;
+  TH1* resYDistr;
+  TDirectory* resDir;
   TGraphErrors* mpvGr;
   TGraphErrors* noiseGr;
+  TGraphErrors* resYGr;
 
   char name[200];
   char title[500];
@@ -133,6 +137,18 @@ int main(int argc, char* argv[])
       noiseGr->SetLineStyle(linStyle);
       noiseGr->SetLineWidth(2);
 
+      sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      resYGr = new TGraphErrors();
+      resYGr->SetName(name);
+      resYGr->SetTitle(title);
+      resYGr->SetMarkerStyle(8);
+      resYGr->SetFillColor(kWhite);
+      resYGr->SetLineColor(iColor); // set line color and style
+      resYGr->SetMarkerColor(iColor);
+      resYGr->SetLineStyle(linStyle);
+      resYGr->SetLineWidth(2);
+
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
 	{
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
@@ -149,12 +165,20 @@ int main(int argc, char* argv[])
 	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
 	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS());
 
+	  resDir = (TDirectory*) inFile->Get("Residuals");
+	  resYDistr = (TH1*) resDir->Get("residualsY");
+	  func = resYDistr->GetFunction("fitFunc");
+
+	  resYGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
+	  resYGr->SetPointError(iRun, 0, func->GetParError(2));
+
 	  inFile->Close();
 	} // loop on the runs for a sensor
 
 
       mpvBiasVec.push_back(mpvGr);
       noiseBiasVec.push_back(noiseGr);
+      resYBiasVec.push_back(resYGr);
 
     } // loop on the sensors
 
@@ -217,6 +241,10 @@ int main(int argc, char* argv[])
   snrAllSensors->SetName("snrAllSensors");
   snrAllSensors->SetTitle("SNR vs bias");
 
+  TMultiGraph* resYAllSensors = new TMultiGraph();
+  resYAllSensors->SetName("resYAllSensors");
+  resYAllSensors->SetTitle("#sigma resduals Y vs bias");
+
   TCanvas* servCan = new TCanvas();
   servCan->SetName("servCan");
 
@@ -258,6 +286,19 @@ int main(int argc, char* argv[])
   snrAllSensors->Draw("AP");
   snrAllSensors->GetXaxis()->SetTitle("Bias [V]");
   snrAllSensors->GetYaxis()->SetTitle("SNR");
+
+  for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
+    {
+      resYBiasVec.at(i)->Draw("AP");
+      resYBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      resYBiasVec.at(i)->GetYaxis()->SetTitle("#sigma res Y [mm]");
+
+      resYAllSensors->Add(resYBiasVec.at(i));
+    }
+
+  resYAllSensors->Draw("AP");
+  resYAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  resYAllSensors->GetYaxis()->SetTitle("#sigma res Y [mm]");
 
   delete servCan;
 
@@ -303,6 +344,20 @@ int main(int argc, char* argv[])
   snrAllSenCan->Modified();
   snrAllSenCan->Update();
   snrAllSenCan->Write();
+
+  for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
+    resYBiasVec.at(i)->Write();
+  resYAllSensors->Write();
+
+  TCanvas* resYAllSenCan = new TCanvas("resYAllSenCan");
+  resYAllSensors->Draw("APL");
+  leg = resYAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  resYAllSenCan->SetGridx();
+  resYAllSenCan->SetGridy();
+  resYAllSenCan->Modified();
+  resYAllSenCan->Update();
+  resYAllSenCan->Write();
 
   outFile->Close();
 
