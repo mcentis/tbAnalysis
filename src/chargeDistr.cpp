@@ -264,8 +264,8 @@ int main(int argc, char* argv[])
   TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -50.5, 511.5);
   TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
-  // sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
-  // TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
+  sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
+  TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 
@@ -325,6 +325,8 @@ int main(int argc, char* argv[])
   double oldContent = 0;
 
   bool goodNoise[nChannels]; // determine wether a channel was hit or not, for the noise analysis
+  double noiseSum; // used for the noise over multiple channels
+  int summed; // number of summed ch for the noise
 
   bool analyzeEvent = false;
 
@@ -387,12 +389,35 @@ int main(int argc, char* argv[])
 		      goodNoise[iCh] = false;
 		} // loop on the tracks
 
-	      for(int iCh = 0; iCh < nChannels; ++iCh)
+	      for(int iCh = 0; iCh < nChannels; ++iCh) // fill noise histos
 	      	if(goodNoise[iCh] && evtAliPH[iCh] != 0) // no ph == 0 and no ch belonging toany hit
 	      	  {
 	      	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
 	      	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
 	      	  }
+
+	      noiseSum = 0;
+	      for(int iCh = 0; iCh < nChannels; ++iCh) // fill the histo of noise for grouped channels
+	      	{
+	      	  if(evtAliPH[iCh] == 0 || goodNoise[iCh] == false) // bad channels or channels belonging to a hit
+		    {
+		      summed = 0;
+		      noiseSum = 0;
+		    }
+		  else
+		    {
+		      noiseSum += evtAliPH[iCh];
+		      summed++;
+		    }
+
+		  if(summed == maxDist * 2 + 1)
+		    {
+		      noiseDistrGroup->Fill(noiseSum * polarity);
+		      summed = 0;
+		      noiseSum = 0;
+		    }
+	      	}
+
 	    }
 
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
@@ -412,6 +437,7 @@ int main(int argc, char* argv[])
 		  break;
 		}
 
+	      // modify this to be function of maxDist!!!!
 	      if(evtAliPH[extraCh] != 0 && evtAliPH[extraCh + 1] != 0 && evtAliPH[extraCh - 1] != 0) continue; // the strip traversed is not a border strip or a not bonded one
 	      else
 		{
@@ -589,7 +615,7 @@ int main(int argc, char* argv[])
 
       for(int iPar = 0; iPar < nPars; ++iPar)
 	{
-	  if(fit->GetParameter(iPar) > -200)
+	  if(fit->GetParameter(iPar) > -200) // exclude nonsense
 	    {
 	      //std::cout << iPar << "   " <<  fit->GetParameter(iPar) << "  +-  " << fit->GetParError(iPar) << std::endl;
 	      lanGausParVsTime[iPar]->SetPoint(lanGausParVsTime[iPar]->GetN(), time, fit->GetParameter(iPar));
@@ -637,6 +663,10 @@ int main(int argc, char* argv[])
 
 	fittedNoiseDistr->Fill(fit->GetParameter(2));
       }
+
+  // fit noise distr of the noise in groups of channels
+  fit = new TF1("gausFit", "gaus", noiseDistrGroup->GetMean() - 2 * noiseDistrGroup->GetRMS(), noiseDistrGroup->GetMean() + 1 * noiseDistrGroup->GetRMS());
+  noiseDistrGroup->Fit(fit, "RQ");
 
   delete fitCan;
 
@@ -755,6 +785,7 @@ int main(int argc, char* argv[])
   chi2SliceFit->Write();
   signalDistr->Write();
   noiseDistr->Write();
+  noiseDistrGroup->Write();
   signalDistrTimeCut->Write();
   noiseDistrTimeCut->Write();
   tempEvt->Write();
