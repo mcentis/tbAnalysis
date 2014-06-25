@@ -309,14 +309,14 @@ int main(int argc, char* argv[])
     {
       lanWBiasVec.at(i)->Draw("AP");
       lanWBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      lanWBiasVec.at(i)->GetYaxis()->SetTitle("Gaus #sigma [ADC]");
+      lanWBiasVec.at(i)->GetYaxis()->SetTitle("Landau width [ADC]");
 
       lanWAllSensors->Add(lanWBiasVec.at(i));
     }
 
   lanWAllSensors->Draw("AP");
   lanWAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  lanWAllSensors->GetYaxis()->SetTitle("Gaus #sigma [ADC]");
+  lanWAllSensors->GetYaxis()->SetTitle("Landau width [ADC]");
 
   for(unsigned int i = 0; i < gSigBiasVec.size(); ++i) // loop on the graphs
     {
