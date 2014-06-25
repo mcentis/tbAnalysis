@@ -264,6 +264,8 @@ int main(int argc, char* argv[])
   TH2D* positivizedSignalTime = new TH2D("positivizedSignalTime", "Hit signal vs time (positivized);Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -50.5, 511.5);
   TH1D* signalDistr = new TH1D("signalDistr", "Hit signal distribution (positivized);Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
+  // sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
+  // TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 
@@ -322,6 +324,8 @@ int main(int argc, char* argv[])
   double posY = 0; // this one will be the mod of the position
   double oldContent = 0;
 
+  bool goodNoise[nChannels]; // determine wether a channel was hit or not, for the noise analysis
+
   bool analyzeEvent = false;
 
   long int nEntries = trkTree->GetEntries();
@@ -358,6 +362,9 @@ int main(int argc, char* argv[])
 	    {
 	      trkEvt->Fill(nTrks);
 	      trkVsEvt->SetPoint(trkVsEvt->GetN(), evtMrk, nTrks);
+
+	      for(int iCh = 0; iCh < nChannels; ++iCh) goodNoise[iCh] = true; // reset the flag for the noise analysis
+
 	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		{
 		  if(trkVec.at(iTrk).measPosDUT[0] > -900 && trkVec.at(iTrk).measPosDUT[1] > -900) // if there is a matched hit
@@ -373,7 +380,19 @@ int main(int argc, char* argv[])
 		      residualsYvsX->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
 		      residualsYvsEvt->Fill(evtMrk, trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
 		    }
-		}
+
+		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
+		  for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // exclude channels that may have charge deposit from the noise analysis
+		    if(iCh >= 0 && iCh < nChannels) // protect limits
+		      goodNoise[iCh] = false;
+		} // loop on the tracks
+
+	      for(int iCh = 0; iCh < nChannels; ++iCh)
+	      	if(goodNoise[iCh] && evtAliPH[iCh] != 0) // no ph == 0 and no ch belonging toany hit
+	      	  {
+	      	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
+	      	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
+	      	  }
 	    }
 
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
@@ -442,12 +461,13 @@ int main(int argc, char* argv[])
 	      positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
 	      signalDistr->Fill(highestCharge * polarity);
 
-	      for(int iCh = 0; iCh < nChannels; ++iCh)
-		if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
-		  {
-		    noiseDistr->Fill(evtAliPH[iCh] * polarity);
-		    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
-		  }
+	      // this might not be the right place for the noise estimation, moved above, in a more general context
+	      // for(int iCh = 0; iCh < nChannels; ++iCh)
+	      // 	if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
+	      // 	  {
+	      // 	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
+	      // 	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
+	      // 	  }
 
 	      if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
 		{
