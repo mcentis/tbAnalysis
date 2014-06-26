@@ -59,6 +59,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> lanWBiasVec;
   std::vector<TGraphErrors*> gSigBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec;
+  std::vector<TGraphErrors*> noiseGroupBiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
   std::vector<double> bias;
   std::vector<double> angle;
@@ -72,12 +73,14 @@ int main(int argc, char* argv[])
   TH1* chDistr;
   TF1* func;
   TH1* noiseDistr;
+  TH1* noiseGroupDistr;
   TH1* resYDistr;
   TDirectory* resDir;
   TGraphErrors* mpvGr;
   TGraphErrors* lanWGr;
   TGraphErrors* gSigGr;
   TGraphErrors* noiseGr;
+  TGraphErrors* noiseGroupGr;
   TGraphErrors* resYGr;
 
   char name[200];
@@ -165,6 +168,18 @@ int main(int argc, char* argv[])
       noiseGr->SetLineStyle(linStyle);
       noiseGr->SetLineWidth(2);
 
+      sprintf(name, "noiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      noiseGroupGr = new TGraphErrors();
+      noiseGroupGr->SetName(name);
+      noiseGroupGr->SetTitle(title);
+      noiseGroupGr->SetMarkerStyle(8);
+      noiseGroupGr->SetFillColor(kWhite);
+      noiseGroupGr->SetLineColor(iColor); // set line color and style
+      noiseGroupGr->SetMarkerColor(iColor);
+      noiseGroupGr->SetLineStyle(linStyle);
+      noiseGroupGr->SetLineWidth(2);
+
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
@@ -199,6 +214,11 @@ int main(int argc, char* argv[])
 	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
 	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS());
 
+	  noiseGroupDistr =  (TH1*) inFile->Get("noiseDistrGroup");
+
+	  noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseGroupDistr->GetRMS());
+	  noiseGroupGr->SetPointError(iRun, 0, noiseGroupDistr->GetRMSError());
+
 	  resDir = (TDirectory*) inFile->Get("Residuals");
 	  resYDistr = (TH1*) resDir->Get("residualsY");
 	  func = resYDistr->GetFunction("fitFunc");
@@ -214,6 +234,7 @@ int main(int argc, char* argv[])
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
       noiseBiasVec.push_back(noiseGr);
+      noiseGroupBiasVec.push_back(noiseGroupGr);
       resYBiasVec.push_back(resYGr);
 
     } // loop on the sensors
@@ -233,7 +254,8 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
       mpvGr = mpvBiasVec.at(i);
-      noiseGr = noiseBiasVec.at(i);
+      //noiseGr = noiseBiasVec.at(i); // now done with the noise over more channels
+      noiseGr = noiseGroupBiasVec.at(i);
 
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -280,6 +302,10 @@ int main(int argc, char* argv[])
   TMultiGraph* noiseAllSensors = new TMultiGraph();
   noiseAllSensors->SetName("noiseAllSensors");
   noiseAllSensors->SetTitle("Noise vs bias");
+
+  TMultiGraph* noiseGroupAllSensors = new TMultiGraph();
+  noiseGroupAllSensors->SetName("noiseGroupAllSensors");
+  noiseGroupAllSensors->SetTitle("Noise over multiple channels vs bias");
 
   TMultiGraph* snrAllSensors = new TMultiGraph();
   snrAllSensors->SetName("snrAllSensors");
@@ -343,6 +369,19 @@ int main(int argc, char* argv[])
   noiseAllSensors->Draw("AP");
   noiseAllSensors->GetXaxis()->SetTitle("Bias [V]");
   noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC]");
+
+  for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
+    {
+      noiseGroupBiasVec.at(i)->Draw("AP");
+      noiseGroupBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      noiseGroupBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+
+      noiseGroupAllSensors->Add(noiseGroupBiasVec.at(i));
+    }
+
+  noiseGroupAllSensors->Draw("AP");
+  noiseGroupAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  noiseGroupAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
 
   for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
     {
@@ -428,6 +467,20 @@ int main(int argc, char* argv[])
   noiseAllSenCan->Modified();
   noiseAllSenCan->Update();
   noiseAllSenCan->Write();
+
+  for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
+    noiseGroupBiasVec.at(i)->Write();
+  noiseGroupAllSensors->Write();
+
+  TCanvas* noiseGroupAllSenCan = new TCanvas("noiseGroupAllSenCan");
+  noiseGroupAllSensors->Draw("APL");
+  leg = noiseGroupAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  noiseGroupAllSenCan->SetGridx();
+  noiseGroupAllSenCan->SetGridy();
+  noiseGroupAllSenCan->Modified();
+  noiseGroupAllSenCan->Update();
+  noiseGroupAllSenCan->Write();
 
   for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
     snrBiasVec.at(i)->Write();

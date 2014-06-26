@@ -426,24 +426,17 @@ int main(int argc, char* argv[])
 	      extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
 
 	      if(trkVec.at(iTrk).extraPosDUT[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT[0] >= xCut2) // geom cut in X
-		{
-		  analyzeEvent = false;
-		  break;
-		}
+		analyzeEvent = false;
 
-	      if(extraCh < 0 || extraCh >= nChannels) // protect array margins (no seg violation hopefully)
-		{
+	      for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // the track must be on the strips considered for the analysis
+		if(iCh >= 0 && iCh < nChannels)
+		  {
+		    if(evtAliPH[iCh] == 0) analyzeEvent = false;
+		  }
+		else
 		  analyzeEvent = false;
-		  break;
-		}
 
-	      // modify this to be function of maxDist!!!!
-	      if(evtAliPH[extraCh] != 0 && evtAliPH[extraCh + 1] != 0 && evtAliPH[extraCh - 1] != 0) continue; // the strip traversed is not a border strip or a not bonded one
-	      else
-		{
-		  analyzeEvent = false;
-		  break;
-		}
+	      if(analyzeEvent == false) break; // if one track does not fullfill the cuts
 	    } // geometry cuts to be fullfilled by all the tracks
 
 	  if(analyzeEvent && trkVec.size() != 0) analyzeEvent = true; // check that there is at least a track 
