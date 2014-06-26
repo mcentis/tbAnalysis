@@ -258,6 +258,7 @@ int main(int argc, char* argv[])
   TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
   TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
   TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
+  TH2D* hitMapLowPH = new TH2D("hitMapLowPH", "Position of tracks with a signal of less than 15 in the time cut;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
 
   // signal and noise
   TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
@@ -421,7 +422,7 @@ int main(int argc, char* argv[])
 	    }
 
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
-	  for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y and X) | check the decision procedure!!!!
+	  for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y and X)
 	    {
 	      extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
 
@@ -480,17 +481,11 @@ int main(int argc, char* argv[])
 	      positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
 	      signalDistr->Fill(highestCharge * polarity);
 
-	      // this might not be the right place for the noise estimation, moved above, in a more general context
-	      // for(int iCh = 0; iCh < nChannels; ++iCh)
-	      // 	if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
-	      // 	  {
-	      // 	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
-	      // 	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
-	      // 	  }
-
 	      if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
 		{
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
+
+		  if(highestCharge * polarity < 15) hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
@@ -765,6 +760,7 @@ int main(int argc, char* argv[])
   hitMapDUTtele->Write();
   hitMapMatched->Write();
   hitMapDUTgoodCh->Write();
+  hitMapLowPH->Write();
   extraChDistr->Write();
   extraChDistrGoodCh->Write();
   signalTime->Write();
