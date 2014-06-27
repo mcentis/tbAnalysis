@@ -258,7 +258,10 @@ int main(int argc, char* argv[])
   TH2D* hitMapDUTgoodCh = new TH2D("hitMapDUTgoodCh", "Extrapolated position of the tracks on the strip sensor, passing a good channel;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
   TH1I* extraChDistr = new TH1I("extraChDistr", "Distribution of the extrapolated position in channels;Channel;Entries", 513, -255.5, 255.5);
   TH1I* extraChDistrGoodCh = new TH1I("extraChDistrGoodCh", "Distribution of the extrapolated position in channels (only good channels shown);Channel;Entries", 256, -0.5, 255.5);
+
+  // low ph entries investigation
   TH2D* hitMapLowPH = new TH2D("hitMapLowPH", "Position of tracks with a signal of less than 15 in the time cut;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
+  TH1I* trkEvtLowPH = new TH1I("traksEvtLowPH", "Number of tracks per event in events that have a signal of less than 15 in the time cut;Number of tracks;Entries", 11, -0.5, 10.5);
 
   // signal and noise
   TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
@@ -485,7 +488,11 @@ int main(int argc, char* argv[])
 		{
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
-		  if(highestCharge * polarity < 15) hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
+		  if(highestCharge * polarity < 15) // investigation of the events with low ph
+		    {
+		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
+		      trkEvtLowPH->Fill(trkVec.size());
+		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
@@ -761,6 +768,7 @@ int main(int argc, char* argv[])
   hitMapMatched->Write();
   hitMapDUTgoodCh->Write();
   hitMapLowPH->Write();
+  trkEvtLowPH->Write();
   extraChDistr->Write();
   extraChDistrGoodCh->Write();
   signalTime->Write();
