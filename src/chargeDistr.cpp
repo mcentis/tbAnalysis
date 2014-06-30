@@ -275,6 +275,7 @@ int main(int argc, char* argv[])
 
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;HiPHStr - ExtraStr [Strip];Entries", 21, -10.5, 10.5);
 
   // chip temperature
   TGraph* tempEvt = new TGraph();
@@ -507,6 +508,7 @@ int main(int argc, char* argv[])
 		       
 		  // strip with highest ph in the hit
 		  phHighestStrip = 0;
+		  highestPHstrip = -1; // if this is not here, the stripHPHDiffExtra will conta
 		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
 		    if(iCh >=0 && iCh < nChannels) // protect array margins
 		      if(evtAliPH[iCh] * polarity > phHighestStrip)
@@ -515,6 +517,7 @@ int main(int argc, char* argv[])
 			  highestPHstrip = iCh;
 			}
 		  stripHPHDistrTimeCut->Fill(phHighestStrip);
+		  stripHPHDiffExtra->Fill(highestPHstrip - hiChargeCh);
 
 		  // hitmap and charge map mod 160 (on 2 strips)
 		  posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
@@ -804,6 +807,7 @@ int main(int argc, char* argv[])
   signalDistrTimeCut->Write();
   noiseDistrTimeCut->Write();
   stripHPHDistrTimeCut->Write();
+  stripHPHDiffExtra->Write();
   tempEvt->Write();
   hitMapMod160->Write();
   chargeMapMod160->Write();
