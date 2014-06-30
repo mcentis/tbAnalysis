@@ -273,6 +273,9 @@ int main(int argc, char* argv[])
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 
+  // signal on the strip with highest ph
+  TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+
   // chip temperature
   TGraph* tempEvt = new TGraph();
   tempEvt->SetName("tempEvt");
@@ -331,6 +334,9 @@ int main(int argc, char* argv[])
   bool goodNoise[nChannels]; // determine wether a channel was hit or not, for the noise analysis
   double noiseSum; // used for the noise over multiple channels
   int summed; // number of summed ch for the noise
+
+  int highestPHstrip = -1; // strip with the highest ph in the hit
+  double phHighestStrip = 0; // charge on the strip with the highest charge
 
   bool analyzeEvent = false;
 
@@ -449,7 +455,7 @@ int main(int argc, char* argv[])
 	  if(analyzeEvent) // all the event tracks in a sensitive part of the sensor and at least one track
 	    {
 	      trkEvtSelected->Fill(nTrks);
-	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
+	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // loop to select the right track
 	      	{
 		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
 
@@ -478,7 +484,8 @@ int main(int argc, char* argv[])
 		      hiChargeCh = extraCh;
 		      trackPos = iTrk;
 		    }
-		}
+		}// loop to select the right track
+
 	      // fill histos old event
 	      signalTime->Fill(evtAliTime, highestCharge);
 	      positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
@@ -498,6 +505,17 @@ int main(int argc, char* argv[])
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
 		      noiseDistrTimeCut->Fill(evtAliPH[iCh] * polarity);
 		       
+		  // strip with highest ph in the hit
+		  phHighestStrip = 0;
+		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
+		    if(iCh >=0 && iCh < nChannels) // protect array margins
+		      if(evtAliPH[iCh] * polarity > phHighestStrip)
+			{
+			  phHighestStrip = evtAliPH[iCh] * polarity;
+			  highestPHstrip = iCh;
+			}
+		  stripHPHDistrTimeCut->Fill(phHighestStrip);
+
 		  // hitmap and charge map mod 160 (on 2 strips)
 		  posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
 		  posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
@@ -785,6 +803,7 @@ int main(int argc, char* argv[])
   noiseDistrGroup->Write();
   signalDistrTimeCut->Write();
   noiseDistrTimeCut->Write();
+  stripHPHDistrTimeCut->Write();
   tempEvt->Write();
   hitMapMod160->Write();
   chargeMapMod160->Write();
