@@ -262,6 +262,7 @@ int main(int argc, char* argv[])
   // low ph entries investigation
   TH2D* hitMapLowPH = new TH2D("hitMapLowPH", "Position of tracks with a signal of less than 15 in the time cut;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
   TH1I* trkEvtLowPH = new TH1I("traksEvtLowPH", "Number of tracks per event in events that have a signal of less than 15 in the time cut;Number of tracks;Entries", 11, -0.5, 10.5);
+  TH1D* stripHPHDiffExtraLowPH = new TH1D("stripHPHDiffExtraLowPH", "Difference in strip number between extracted and highest PH strip in the time cut, events with PH < 15;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
 
   // signal and noise
   TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
@@ -498,12 +499,6 @@ int main(int argc, char* argv[])
 		{
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
-		  if(highestCharge * polarity < 15) // investigation of the events with low ph
-		    {
-		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
-		      trkEvtLowPH->Fill(trkVec.size());
-		    }
-
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
 		      noiseDistrTimeCut->Fill(evtAliPH[iCh] * polarity);
@@ -520,6 +515,13 @@ int main(int argc, char* argv[])
 			}
 		  stripHPHDistrTimeCut->Fill(phHighestStrip);
 		  stripHPHDiffExtra->Fill(hiChargeCh - highestPHstrip);
+
+		  if(highestCharge * polarity < 15) // investigation of the events with low ph
+		    {
+		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
+		      trkEvtLowPH->Fill(trkVec.size());
+		      stripHPHDiffExtraLowPH->Fill(hiChargeCh - highestPHstrip);
+		    }
 
 		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
 		    if(iCh >=0 && iCh < nChannels) // protect array margins
@@ -799,6 +801,7 @@ int main(int argc, char* argv[])
   hitMapDUTgoodCh->Write();
   hitMapLowPH->Write();
   trkEvtLowPH->Write();
+  stripHPHDiffExtraLowPH->Write();
   extraChDistr->Write();
   extraChDistrGoodCh->Write();
   signalTime->Write();
