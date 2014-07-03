@@ -198,7 +198,7 @@ int main(int argc, char* argv[])
 	  inFile = TFile::Open(name);
 
 	  chDistr = (TH1*) inFile->Get("signalDistrTimeCut");
-	  func = chDistr->GetFunction("lanGausFit_0");
+	  func = chDistr->GetFunction("lanGausFit");
 
 	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(1));
 	  mpvGr->SetPointError(iRun, 0, func->GetParError(1));
