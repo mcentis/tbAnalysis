@@ -504,8 +504,8 @@ int main(int argc, char* argv[])
 		      noiseDistrTimeCut->Fill(evtAliPH[iCh] * polarity);
 		       
 		  // strip with highest ph in the hit
-		  phHighestStrip = 0;
-		  highestPHstrip = -1; // if this is not here, the stripHPHDiffExtra will conta
+		  phHighestStrip = -1e3;
+		  highestPHstrip = -1;
 		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
 		    if(iCh >=0 && iCh < nChannels) // protect array margins
 		      if(evtAliPH[iCh] * polarity > phHighestStrip)
