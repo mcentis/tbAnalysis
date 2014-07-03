@@ -104,11 +104,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
 
   double halfRange = 20; // guess for the range of the gaus fit
 
-  static int funcCall = 0; // number of times the function was called
-  char name[50]; // name used for the fit functions in order not to overwrite previos fits
-
-  sprintf(name, "gausFit_%i", funcCall); // different names in order not to overwrite oder fit functions
-  TF1* gausFit = new TF1(name, "gaus", histMax - halfRange, histMax + halfRange);
+  TF1* gausFit = new TF1("gausFit", "gaus", histMax - halfRange, histMax + halfRange);
   gausFit->SetLineColor(kBlue);
 
   inHist->Fit(gausFit, "RQL");
@@ -169,10 +165,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   pllo[0]=0.01; pllo[1]=-15.0; pllo[2]=1.0; pllo[3]=gausSig * 0.1;
   plhi[0]=20.0; plhi[1]=200.0; plhi[2]=10000000.0; plhi[3]=gausSig;
 
-  sprintf(name, "lanGausFit_%i", funcCall); // different names in order not to overwrite oder fit functions
-  funcCall++;
-
-  TF1* ffit = new TF1(name, langaufun, fr[0], fr[1], 4);
+  TF1* ffit = new TF1("lanGausFit", langaufun, fr[0], fr[1], 4);
   ffit->SetParameters(sv);
   ffit->SetParNames("Width","MPV","Area","GSigma");
   ffit->SetLineColor(kRed);
