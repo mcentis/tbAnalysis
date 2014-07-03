@@ -272,6 +272,7 @@ int main(int argc, char* argv[])
   sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
   TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 
   // signal on the strip with highest ph
@@ -279,7 +280,10 @@ int main(int argc, char* argv[])
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
   TH2D* phAroundExtraStripTimeCut = new TH2D("phAroundExtraStripTimeCut", "PH of the hit centered on the extrapolated strip, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
-
+  TH2D* stripHPHSignalTime = new TH2D("stripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
+  TH2D* leftStripHPHSignalTime = new TH2D("leftStripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
+  TH2D* rightStripHPHSignalTime = new TH2D("rightStripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
+ 
   // chip temperature
   TGraph* tempEvt = new TGraph();
   tempEvt->SetName("tempEvt");
@@ -495,24 +499,32 @@ int main(int argc, char* argv[])
 	      positivizedSignalTime->Fill(evtAliTime, highestCharge * polarity);
 	      signalDistr->Fill(highestCharge * polarity);
 
+	      // strip with highest ph in the hit
+	      phHighestStrip = -1e3;
+	      highestPHstrip = -1;
+	      for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
+		if(iCh >=0 && iCh < nChannels) // protect array margins
+		  if(evtAliPH[iCh] * polarity > phHighestStrip)
+		    {
+		      phHighestStrip = evtAliPH[iCh] * polarity;
+		      highestPHstrip = iCh;
+		    }
+	      stripHPHSignalTime->Fill(evtAliTime, phHighestStrip);
+	      leftStripHPHSignalTime->Fill(evtAliTime, evtAliPH[highestPHstrip - 1]);
+	      rightStripHPHSignalTime->Fill(evtAliTime, evtAliPH[highestPHstrip + 1]);
+
 	      if(evtAliTime >= timeCut1 && evtAliTime <= timeCut2) // apply time cut
 		{
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
+		  if(abs(hiChargeCh - highestPHstrip) <= 1)
+		  signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
+
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
 		      noiseDistrTimeCut->Fill(evtAliPH[iCh] * polarity);
-		       
+
 		  // strip with highest ph in the hit
-		  phHighestStrip = -1e3;
-		  highestPHstrip = -1;
-		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
-		    if(iCh >=0 && iCh < nChannels) // protect array margins
-		      if(evtAliPH[iCh] * polarity > phHighestStrip)
-			{
-			  phHighestStrip = evtAliPH[iCh] * polarity;
-			  highestPHstrip = iCh;
-			}
 		  stripHPHDistrTimeCut->Fill(phHighestStrip);
 		  stripHPHDiffExtra->Fill(hiChargeCh - highestPHstrip);
 
@@ -625,6 +637,7 @@ int main(int argc, char* argv[])
   // 			 noiseFit->GetParameter(1), noiseFit->GetParameter(2)); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+  lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
   for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
@@ -817,9 +830,13 @@ int main(int argc, char* argv[])
   noiseDistr->Write();
   noiseDistrGroup->Write();
   signalDistrTimeCut->Write();
+  signalDistrTimeCutDistCut->Write();
   noiseDistrTimeCut->Write();
   stripHPHDistrTimeCut->Write();
   stripHPHDiffExtra->Write();
+  stripHPHSignalTime->Write();
+  leftStripHPHSignalTime->Write();
+  rightStripHPHSignalTime->Write();
   phAroundHPHstripTimeCut->Write();
   phAroundExtraStripTimeCut->Write();
   tempEvt->Write();
