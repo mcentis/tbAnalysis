@@ -281,8 +281,8 @@ int main(int argc, char* argv[])
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
   TH2D* phAroundExtraStripTimeCut = new TH2D("phAroundExtraStripTimeCut", "PH of the hit centered on the extrapolated strip, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
   TH2D* stripHPHSignalTime = new TH2D("stripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
-  TH2D* leftStripHPHSignalTime = new TH2D("leftStripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
-  TH2D* rightStripHPHSignalTime = new TH2D("rightStripHPHSignalTime", "Hit signal vs time (positivized), for the strip with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
+  TH2D* leftStripHPHSignalTime = new TH2D("leftStripHPHSignalTime", "Hit signal vs time (positivized), for the left strip neighboring the one with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
+  TH2D* rightStripHPHSignalTime = new TH2D("rightStripHPHSignalTime", "Hit signal vs time (positivized), for the right strip neighboring the one  with highest charge;Time [ns];Hit signal [ADC]", 60, 0, 120, 151, -150.5, 411.5);
  
   // chip temperature
   TGraph* tempEvt = new TGraph();
@@ -299,6 +299,8 @@ int main(int argc, char* argv[])
   TH2D* chargeMapMod160Normalized = new TH2D("chargeMapMod160Normalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
   TH2D* chargeMapMod160 = new TH2D("chargeMapMod160", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
   TH2D* hitMapMod160 = new TH2D("hitMapMod160", "Hit map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+
+  TH1D* etaDistrTimeCut = new TH1D("etaDistrTimeCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
   // charge collection map over the sensor in the time cut
   minX = -20;
@@ -345,6 +347,9 @@ int main(int argc, char* argv[])
 
   int highestPHstrip = -1; // strip with the highest ph in the hit
   double phHighestStrip = 0; // charge on the strip with the highest charge
+
+  double phR = -1; // variables for the eta distribution
+  double phL = -1;
 
   bool analyzeEvent = false;
 
@@ -528,6 +533,20 @@ int main(int argc, char* argv[])
 		  stripHPHDistrTimeCut->Fill(phHighestStrip);
 		  stripHPHDiffExtra->Fill(hiChargeCh - highestPHstrip);
 
+		  // eta distribution
+		  if(evtAliPH[highestPHstrip + 1] * polarity > evtAliPH[highestPHstrip - 1] * polarity)
+		    {
+		      phL = phHighestStrip;
+		      phR = evtAliPH[highestPHstrip + 1] * polarity;
+		    }
+		  else
+		    {
+		      phL = evtAliPH[highestPHstrip - 1] * polarity;
+		      phR = phHighestStrip;
+		    }
+		  etaDistrTimeCut->Fill(phR / (phR + phL));
+
+
 		  if(highestCharge * polarity < 15) // investigation of the events with low ph
 		    {
 		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
@@ -582,6 +601,15 @@ int main(int argc, char* argv[])
 
   TProfile* positivizedSignalTimeProfile = positivizedSignalTime->ProfileX("positivizedSignalTimeProfile");
   positivizedSignalTimeProfile->SetTitle("Positivized signal time profile");
+
+  TProfile* stripHPHSignalTimeProfile = stripHPHSignalTime->ProfileX("stripHPHSignalTimeProfile");
+  stripHPHSignalTimeProfile->SetTitle("Time profile of the signal of the strip with highest PH");
+
+  TProfile* leftStripHPHSignalTimeProfile = leftStripHPHSignalTime->ProfileX("leftStripHPHSignalTimeProfile");
+  leftStripHPHSignalTimeProfile->SetTitle("Time profile of the signal of the left strip neighboring the one with highest PH");
+
+  TProfile* rightStripHPHSignalTimeProfile = rightStripHPHSignalTime->ProfileX("rightStripHPHSignalTimeProfile");
+  rightStripHPHSignalTimeProfile->SetTitle("Time profile of the signal of the right strip neighboring the one with highest PH");
 
   TProfile* profileResYvsY = residualsYvsY->ProfileX("profileResYvsY");
   profileResYvsY->SetTitle("Profile histo of the residuals along y vs y");
@@ -837,6 +865,9 @@ int main(int argc, char* argv[])
   stripHPHSignalTime->Write();
   leftStripHPHSignalTime->Write();
   rightStripHPHSignalTime->Write();
+  stripHPHSignalTimeProfile->Write();
+  leftStripHPHSignalTimeProfile->Write();
+  rightStripHPHSignalTimeProfile->Write();
   phAroundHPHstripTimeCut->Write();
   phAroundExtraStripTimeCut->Write();
   tempEvt->Write();
@@ -850,6 +881,7 @@ int main(int argc, char* argv[])
   chargeMapNormalized->Write();
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
+  etaDistrTimeCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
