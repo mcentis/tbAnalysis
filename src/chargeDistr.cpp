@@ -277,6 +277,7 @@ int main(int argc, char* argv[])
 
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
   TH2D* phAroundExtraStripTimeCut = new TH2D("phAroundExtraStripTimeCut", "PH of the hit centered on the extrapolated strip, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
@@ -523,7 +524,10 @@ int main(int argc, char* argv[])
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
 		  if(abs(hiChargeCh - highestPHstrip) <= 1)
-		  signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
+		    {
+		      signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
+		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
+		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
@@ -666,6 +670,7 @@ int main(int argc, char* argv[])
 
   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
   for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
@@ -861,6 +866,7 @@ int main(int argc, char* argv[])
   signalDistrTimeCutDistCut->Write();
   noiseDistrTimeCut->Write();
   stripHPHDistrTimeCut->Write();
+  stripHPHDistrTimeCutDistCut->Write();
   stripHPHDiffExtra->Write();
   stripHPHSignalTime->Write();
   leftStripHPHSignalTime->Write();
