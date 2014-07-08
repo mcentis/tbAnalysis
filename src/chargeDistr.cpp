@@ -278,6 +278,7 @@ int main(int argc, char* argv[])
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
   TH2D* phAroundExtraStripTimeCut = new TH2D("phAroundExtraStripTimeCut", "PH of the hit centered on the extrapolated strip, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
@@ -523,10 +524,25 @@ int main(int argc, char* argv[])
 		{
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
-		  if(abs(hiChargeCh - highestPHstrip) <= 1)
+		  if(abs(hiChargeCh - highestPHstrip) <= 1) // the strip with the highest PH is neighboring the hit one
 		    {
 		      signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
 		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
+
+		      // eta distribution
+		      if(evtAliPH[highestPHstrip + 1] * polarity > evtAliPH[highestPHstrip - 1] * polarity)
+			{
+			  phL = phHighestStrip;
+			  phR = evtAliPH[highestPHstrip + 1] * polarity;
+			}
+		      else
+			{
+			  phL = evtAliPH[highestPHstrip - 1] * polarity;
+			  phR = phHighestStrip;
+			}
+		      etaDistrTimeCut->Fill(phR / (phR + phL));
+
+		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
@@ -536,19 +552,6 @@ int main(int argc, char* argv[])
 		  // strip with highest ph in the hit
 		  stripHPHDistrTimeCut->Fill(phHighestStrip);
 		  stripHPHDiffExtra->Fill(hiChargeCh - highestPHstrip);
-
-		  // eta distribution
-		  if(evtAliPH[highestPHstrip + 1] * polarity > evtAliPH[highestPHstrip - 1] * polarity)
-		    {
-		      phL = phHighestStrip;
-		      phR = evtAliPH[highestPHstrip + 1] * polarity;
-		    }
-		  else
-		    {
-		      phL = evtAliPH[highestPHstrip - 1] * polarity;
-		      phR = phHighestStrip;
-		    }
-		  etaDistrTimeCut->Fill(phR / (phR + phL));
 
 
 		  if(highestCharge * polarity < 15) // investigation of the events with low ph
@@ -671,6 +674,7 @@ int main(int argc, char* argv[])
   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
 
   for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
@@ -867,6 +871,7 @@ int main(int argc, char* argv[])
   noiseDistrTimeCut->Write();
   stripHPHDistrTimeCut->Write();
   stripHPHDistrTimeCutDistCut->Write();
+  stripHPH_plusNeigh_DistrTimeCutDistCut->Write();
   stripHPHDiffExtra->Write();
   stripHPHSignalTime->Write();
   leftStripHPHSignalTime->Write();
