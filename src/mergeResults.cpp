@@ -60,6 +60,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> gSigBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec;
   std::vector<TGraphErrors*> noiseGroupBiasVec;
+  std::vector<TGraphErrors*> noisePairBiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
   std::vector<double> bias;
   std::vector<double> angle;
@@ -74,6 +75,7 @@ int main(int argc, char* argv[])
   TF1* func;
   TH1* noiseDistr;
   TH1* noiseGroupDistr;
+  TH1* noisePairDistr;
   TH1* resYDistr;
   TDirectory* resDir;
   TGraphErrors* mpvGr;
@@ -81,6 +83,7 @@ int main(int argc, char* argv[])
   TGraphErrors* gSigGr;
   TGraphErrors* noiseGr;
   TGraphErrors* noiseGroupGr;
+  TGraphErrors* noisePairGr;
   TGraphErrors* resYGr;
 
   char name[200];
@@ -180,6 +183,18 @@ int main(int argc, char* argv[])
       noiseGroupGr->SetLineStyle(linStyle);
       noiseGroupGr->SetLineWidth(2);
 
+      sprintf(name, "noisePair_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      noisePairGr = new TGraphErrors();
+      noisePairGr->SetName(name);
+      noisePairGr->SetTitle(title);
+      noisePairGr->SetMarkerStyle(8);
+      noisePairGr->SetFillColor(kWhite);
+      noisePairGr->SetLineColor(iColor); // set line color and style
+      noisePairGr->SetMarkerColor(iColor);
+      noisePairGr->SetLineStyle(linStyle);
+      noisePairGr->SetLineWidth(2);
+
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
@@ -197,7 +212,9 @@ int main(int argc, char* argv[])
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
 	  inFile = TFile::Open(name);
 
-	  chDistr = (TH1*) inFile->Get("signalDistrTimeCut");
+	  //chDistr = (TH1*) inFile->Get("signalDistrTimeCutDistCut"); // full hit 
+	  //chDistr = (TH1*) inFile->Get("stripHPHDistrTimeCutDistCut"); // strip highest ph
+	  chDistr = (TH1*) inFile->Get("stripHPH_plusNeigh_DistrTimeCutDistCut"); // full hit 
 	  func = chDistr->GetFunction("lanGausFit");
 
 	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(1));
@@ -219,6 +236,11 @@ int main(int argc, char* argv[])
 	  noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseGroupDistr->GetRMS());
 	  noiseGroupGr->SetPointError(iRun, 0, noiseGroupDistr->GetRMSError());
 
+	  noisePairDistr =  (TH1*) inFile->Get("noiseDistrPair");
+
+	  noisePairGr->SetPoint(iRun, fabs(bias.at(iRun)), noisePairDistr->GetRMS());
+	  noisePairGr->SetPointError(iRun, 0, noisePairDistr->GetRMSError());
+
 	  resDir = (TDirectory*) inFile->Get("Residuals");
 	  resYDistr = (TH1*) resDir->Get("residualsY");
 	  func = resYDistr->GetFunction("fitFunc");
@@ -235,6 +257,7 @@ int main(int argc, char* argv[])
       gSigBiasVec.push_back(gSigGr);
       noiseBiasVec.push_back(noiseGr);
       noiseGroupBiasVec.push_back(noiseGroupGr);
+      noisePairBiasVec.push_back(noisePairGr);
       resYBiasVec.push_back(resYGr);
 
     } // loop on the sensors
@@ -254,8 +277,9 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
       mpvGr = mpvBiasVec.at(i);
-      //noiseGr = noiseBiasVec.at(i); // now done with the noise over more channels
-      noiseGr = noiseGroupBiasVec.at(i);
+      //noiseGr = noiseBiasVec.at(i); // mean noise on single channel
+      //noiseGr = noiseGroupBiasVec.at(i); // noise on a group of strips
+      noiseGr = noisePairBiasVec.at(i); // noise on a pair of strips
 
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -306,6 +330,10 @@ int main(int argc, char* argv[])
   TMultiGraph* noiseGroupAllSensors = new TMultiGraph();
   noiseGroupAllSensors->SetName("noiseGroupAllSensors");
   noiseGroupAllSensors->SetTitle("Noise over multiple channels vs bias");
+
+  TMultiGraph* noisePairAllSensors = new TMultiGraph();
+  noisePairAllSensors->SetName("noisePairAllSensors");
+  noisePairAllSensors->SetTitle("Noise over multiple channels vs bias");
 
   TMultiGraph* snrAllSensors = new TMultiGraph();
   snrAllSensors->SetName("snrAllSensors");
@@ -382,6 +410,19 @@ int main(int argc, char* argv[])
   noiseGroupAllSensors->Draw("AP");
   noiseGroupAllSensors->GetXaxis()->SetTitle("Bias [V]");
   noiseGroupAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+
+  for(unsigned int i = 0; i < noisePairBiasVec.size(); ++i) // loop on the graphs
+    {
+      noisePairBiasVec.at(i)->Draw("AP");
+      noisePairBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      noisePairBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+
+      noisePairAllSensors->Add(noisePairBiasVec.at(i));
+    }
+
+  noisePairAllSensors->Draw("AP");
+  noisePairAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  noisePairAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
 
   for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
     {
@@ -481,6 +522,20 @@ int main(int argc, char* argv[])
   noiseGroupAllSenCan->Modified();
   noiseGroupAllSenCan->Update();
   noiseGroupAllSenCan->Write();
+
+  for(unsigned int i = 0; i < noisePairBiasVec.size(); ++i) // loop on the graphs
+    noisePairBiasVec.at(i)->Write();
+  noisePairAllSensors->Write();
+
+  TCanvas* noisePairAllSenCan = new TCanvas("noisePairAllSenCan");
+  noisePairAllSensors->Draw("APL");
+  leg = noisePairAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  noisePairAllSenCan->SetGridx();
+  noisePairAllSenCan->SetGridy();
+  noisePairAllSenCan->Modified();
+  noisePairAllSenCan->Update();
+  noisePairAllSenCan->Write();
 
   for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
     snrBiasVec.at(i)->Write();
