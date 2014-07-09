@@ -271,6 +271,7 @@ int main(int argc, char* argv[])
   TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
   sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
   TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
+  TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
@@ -441,8 +442,29 @@ int main(int argc, char* argv[])
 		      summed = 0;
 		      noiseSum = 0;
 		    }
-	      	}
+	      	} // noise over group of channels
 
+	      noiseSum = 0;
+	      for(int iCh = 0; iCh < nChannels; ++iCh) // fill the histo of noise for pairs of channels
+	      	{
+	      	  if(evtAliPH[iCh] == 0 || goodNoise[iCh] == false) // bad channels or channels belonging to a hit
+		    {
+		      summed = 0;
+		      noiseSum = 0;
+		    }
+		  else
+		    {
+		      noiseSum += evtAliPH[iCh];
+		      summed++;
+		    }
+
+		  if(summed == 2)
+		    {
+		      noiseDistrPair->Fill(noiseSum * polarity);
+		      summed = 0;
+		      noiseSum = 0;
+		    }
+	      	} // noise for pairs of channels
 	    }
 
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
@@ -745,6 +767,10 @@ int main(int argc, char* argv[])
   fit = new TF1("gausFit", "gaus", noiseDistrGroup->GetMean() - 2 * noiseDistrGroup->GetRMS(), noiseDistrGroup->GetMean() + 1 * noiseDistrGroup->GetRMS());
   noiseDistrGroup->Fit(fit, "RQ");
 
+  // fit noise distr for a noise on pairs of channels
+  fit = new TF1("gausFit", "gaus", noiseDistrPair->GetMean() - 2 * noiseDistrPair->GetRMS(), noiseDistrPair->GetMean() + 1 * noiseDistrPair->GetRMS());
+  noiseDistrPair->Fit(fit, "RQ");
+
   delete fitCan;
 
   double chargeSum;
@@ -866,6 +892,7 @@ int main(int argc, char* argv[])
   signalDistr->Write();
   noiseDistr->Write();
   noiseDistrGroup->Write();
+  noiseDistrPair->Write();
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
   noiseDistrTimeCut->Write();
