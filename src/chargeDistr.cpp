@@ -263,6 +263,7 @@ int main(int argc, char* argv[])
   TH2D* hitMapLowPH = new TH2D("hitMapLowPH", "Position of tracks with a signal of less than 15 in the time cut;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
   TH1I* trkEvtLowPH = new TH1I("traksEvtLowPH", "Number of tracks per event in events that have a signal of less than 15 in the time cut;Number of tracks;Entries", 11, -0.5, 10.5);
   TH1D* stripHPHDiffExtraLowPH = new TH1D("stripHPHDiffExtraLowPH", "Difference in strip number between extracted and highest PH strip in the time cut, events with PH < 15;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
+  TH2D* diffExtraStripHPHvsPH = new TH2D("diffExtraStripHPHvsPH", "Difference extrapolated strip and strip HPH vs hit PH;Hit PH [ADC];ExtraStr - HiPHSt  [Strip];Entries",  562, -50.5, 511.5, 21, -10.5, 10.5);
 
   // signal and noise
   TH2D* signalTime = new TH2D("signalTime", "Hit signal vs time;Time [ns];Hit signal [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
@@ -582,6 +583,7 @@ int main(int argc, char* argv[])
 		      trkEvtLowPH->Fill(trkVec.size());
 		      stripHPHDiffExtraLowPH->Fill(hiChargeCh - highestPHstrip);
 		    }
+		  diffExtraStripHPHvsPH->Fill(highestCharge * polarity, hiChargeCh - highestPHstrip);
 
 		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
 		    if(iCh >=0 && iCh < nChannels) // protect array margins
@@ -878,6 +880,7 @@ int main(int argc, char* argv[])
   hitMapLowPH->Write();
   trkEvtLowPH->Write();
   stripHPHDiffExtraLowPH->Write();
+  diffExtraStripHPHvsPH->Write();
   extraChDistr->Write();
   extraChDistrGoodCh->Write();
   signalTime->Write();
