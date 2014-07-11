@@ -687,19 +687,17 @@ int main(int argc, char* argv[])
   fitResiduals(residualsX, -0.5, 0.5);
   fitResiduals(residualsY, -0.25, 0.25);
 
-  // double range1 = noiseDistrTimeCut->GetMean() - 2 * noiseDistrTimeCut->GetRMS();
-  // double range2 = noiseDistrTimeCut->GetMean() + noiseDistrTimeCut->GetRMS();
-  // TF1* noiseFit = new TF1("noiseFit", "gaus", range1, range2);
-  // noiseDistrTimeCut->Fit(noiseFit, "RQN");
-
-  // gausLanGausFitFixGaus(signalDistrTimeCut, negSigmaFit, posSigmaFit,
-  // 			 noiseFit->GetParameter(1), noiseFit->GetParameter(2)); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+  // gausLanGausFitFixGaus(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
+  //           		noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
-  lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
-  //gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
+
+  gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
+  // gausLanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit); 
+  // gausLanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions of the various times
     {

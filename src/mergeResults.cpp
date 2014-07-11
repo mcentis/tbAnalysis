@@ -212,19 +212,31 @@ int main(int argc, char* argv[])
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
 	  inFile = TFile::Open(name);
 
-	  //chDistr = (TH1*) inFile->Get("signalDistrTimeCutDistCut"); // full hit 
+	  chDistr = (TH1*) inFile->Get("signalDistrTimeCutDistCut"); // full hit 
 	  //chDistr = (TH1*) inFile->Get("stripHPHDistrTimeCutDistCut"); // strip highest ph
-	  chDistr = (TH1*) inFile->Get("stripHPH_plusNeigh_DistrTimeCutDistCut"); // full hit 
-	  func = chDistr->GetFunction("lanGausFit");
+	  //chDistr = (TH1*) inFile->Get("stripHPH_plusNeigh_DistrTimeCutDistCut"); // strip highest ph and highest neighbor
 
-	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(1));
-	  mpvGr->SetPointError(iRun, 0, func->GetParError(1));
+	  // func = chDistr->GetFunction("lanGausFit");
 
-	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(0));
-	  lanWGr->SetPointError(iRun, 0, func->GetParError(0));
+	  // mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(1));
+	  // mpvGr->SetPointError(iRun, 0, func->GetParError(1));
 
-	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
-	  gSigGr->SetPointError(iRun, 0, func->GetParError(3));
+	  // lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(0));
+	  // lanWGr->SetPointError(iRun, 0, func->GetParError(0));
+
+	  // gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
+	  // gSigGr->SetPointError(iRun, 0, func->GetParError(3));
+
+	  func = chDistr->GetFunction("gausLang");
+
+	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
+	  mpvGr->SetPointError(iRun, 0, func->GetParError(3));
+
+	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
+	  lanWGr->SetPointError(iRun, 0, func->GetParError(2));
+
+	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(5));
+	  gSigGr->SetPointError(iRun, 0, func->GetParError(5));
 
 	  noiseDistr =  (TH1*) inFile->Get("fittedNoiseDistr");
 
@@ -277,9 +289,9 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
       mpvGr = mpvBiasVec.at(i);
-      //noiseGr = noiseBiasVec.at(i); // mean noise on single channel
+      noiseGr = noiseBiasVec.at(i); // mean noise on single channel
       //noiseGr = noiseGroupBiasVec.at(i); // noise on a group of strips
-      noiseGr = noisePairBiasVec.at(i); // noise on a pair of strips
+      //noiseGr = noisePairBiasVec.at(i); // noise on a pair of strips
 
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));

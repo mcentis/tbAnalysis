@@ -182,8 +182,8 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
 
 Double_t gausLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau gaussian convolution
 {
-  Double_t gausPart = par[0] * TMath::Gaus(*x, par[1], par[2]);
-  Double_t langauPart = langaufun(x, &par[3]); // par 0 to 2 belong to the gauss part
+  Double_t gausPart = par[0] * TMath::Gaus(*x, par[1], par[5]);
+  Double_t langauPart = langaufun(x, &par[2]); // par 0 to 2 belong to the gauss part
 
   return langauPart + gausPart;
 }
@@ -195,19 +195,19 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
 
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
 
-  const int nPars = 7;
+  const int nPars = 6;
   double par[nPars] = {0};
 
-  for(int i = 0; i < 3; ++i) par[i] = gausFunc->GetParameter(i); // get the gaus fit parameters
-  for(int i = 3; i < nPars; ++i) par[i] = langauFunc->GetParameter(i - 3); // get parameters form langaus fit
+  for(int i = 0; i < 2; ++i) par[i] = gausFunc->GetParameter(i); // get the gaus fit parameters
+  for(int i = 2; i < nPars; ++i) par[i] = langauFunc->GetParameter(i - 2); // get parameters form langaus fit
 
   double parLimHi[nPars] = {0};
   double parLimLo[nPars] = {0};
 
   parLimLo[0] = -5; // g0 const
   parLimHi[0] = 1000000;
-  parLimLo[1] = par[1] - 0.5 * par[2]; // g0 mean
-  parLimHi[1] = par[1] + 0.5 * par[2];
+  parLimLo[1] = par[1] - 0.5 * gausFunc->GetParameter(2); // g0 mean
+  parLimHi[1] = par[1] + 0.5 * gausFunc->GetParameter(2);
 
   for(int i = 2; i < nPars; ++i) // allow a 50% variation on the already fitted parameters
     {
@@ -215,7 +215,7 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
       parLimHi[i] = par[i] + 0.5 * fabs(par[i]);
     }
 
-  const char* parNames[nPars] = {"ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma"};
+  const char* parNames[nPars] = {"ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma"};
   std::cout << "Start parameters and limits\n";
   for(int i = 0; i < nPars; ++i)
     std::cout << parNames[i] << "\t\t" << par[i] << "    " << parLimLo[i] << "   " << parLimHi[i] << " \n";
@@ -226,7 +226,7 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
 
   TF1* gausLang = new TF1("gausLang", gausLangaufun, fitR1, fitR2, nPars);
   gausLang->SetParameters(par);
-  gausLang->SetParNames("ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma");
+  gausLang->SetParNames("ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma");
   for(int i = 0; i < nPars; ++i)
     gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
 
@@ -239,14 +239,14 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
 {
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
 
-  const int nPars = 7;
+  const int nPars = 6;
   double par[nPars] = {0};
 
   // set the gaus fit parameters
   par[0] = inHist->GetBinContent(inHist->FindBin(0)); // constant gets the value of the bin at 0
   par[1] = mean; // these 2 remain fixed
-  par[2] = sigma;
-  for(int i = 3; i < nPars; ++i) par[i] = langauFunc->GetParameter(i - 3); // get parameters form langaus fit
+  par[5] = sigma;
+  for(int i = 2; i < nPars - 1; ++i) par[i] = langauFunc->GetParameter(i - 2); // get parameters form langaus fit, except gaus sigma
 
   double parLimHi[nPars] = {0};
   double parLimLo[nPars] = {0};
@@ -255,17 +255,16 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
   parLimHi[0] = 1000000;
   parLimLo[1] = mean; // g0 mean
   parLimHi[1] = mean;
-  parLimLo[2] = sigma; // g0 sigma
-  parLimHi[2] = sigma;
+  parLimLo[5] = sigma; // g0 sigma
+  parLimHi[5] = sigma;
 
-
-  for(int i = 3; i < nPars; ++i) // allow a 50% variation on the already fitted parameters
+  for(int i = 2; i < nPars - 1; ++i) // allow a 50% variation on the already fitted parameters, fix gaus sigma
     {
       parLimLo[i] = par[i] - 0.5 * fabs(par[i]);
       parLimHi[i] = par[i] + 0.5 * fabs(par[i]);
     }
 
-  const char* parNames[nPars] = {"ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma"};
+  const char* parNames[nPars] = {"ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma"};
   std::cout << "Start parameters and limits\n";
   for(int i = 0; i < nPars; ++i)
     std::cout << parNames[i] << "\t\t" << par[i] << "    " << parLimLo[i] << "   " << parLimHi[i] << " \n";
@@ -276,7 +275,7 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
 
   TF1* gausLang = new TF1("gausLang", gausLangaufun, fitR1, fitR2, nPars);
   gausLang->SetParameters(par);
-  gausLang->SetParNames("ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma");
+  gausLang->SetParNames("ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma");
   for(int i = 0; i < nPars; ++i)
     gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
 
