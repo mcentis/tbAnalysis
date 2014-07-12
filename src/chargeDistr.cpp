@@ -274,12 +274,12 @@ int main(int argc, char* argv[])
   TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
   TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 151, -50.5, 511.5);
-  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 561, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
-  TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 561, -50.5, 511.5);
   TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
