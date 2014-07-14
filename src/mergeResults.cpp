@@ -62,6 +62,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> noiseBiasVec;
   std::vector<TGraphErrors*> noiseGroupBiasVec;
   std::vector<TGraphErrors*> noisePairBiasVec;
+  std::vector<TGraphErrors*> eff95BiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
   std::vector<double> bias;
   std::vector<double> angle;
@@ -77,6 +78,7 @@ int main(int argc, char* argv[])
   TH1* noiseDistr;
   TH1* noiseGroupDistr;
   TH1* noisePairDistr;
+  TH1* intSeedDistr;
   TH1* resYDistr;
   TDirectory* resDir;
   TGraphErrors* maxFitGr;
@@ -86,6 +88,7 @@ int main(int argc, char* argv[])
   TGraphErrors* noiseGr;
   TGraphErrors* noiseGroupGr;
   TGraphErrors* noisePairGr;
+  TGraphErrors* eff95Gr;
   TGraphErrors* resYGr;
 
   char name[200];
@@ -209,6 +212,18 @@ int main(int argc, char* argv[])
       noisePairGr->SetLineStyle(linStyle);
       noisePairGr->SetLineWidth(2);
 
+      sprintf(name, "eff95_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      eff95Gr = new TGraphErrors();
+      eff95Gr->SetName(name);
+      eff95Gr->SetTitle(title);
+      eff95Gr->SetMarkerStyle(8);
+      eff95Gr->SetFillColor(kWhite);
+      eff95Gr->SetLineColor(iColor); // set line color and style
+      eff95Gr->SetMarkerColor(iColor);
+      eff95Gr->SetLineStyle(linStyle);
+      eff95Gr->SetLineWidth(2);
+
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
@@ -254,20 +269,30 @@ int main(int argc, char* argv[])
 	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(5));
 	  gSigGr->SetPointError(iRun, 0, func->GetParError(5));
 
-	  noiseDistr =  (TH1*) inFile->Get("fittedNoiseDistr");
+	  noiseDistr = (TH1*) inFile->Get("fittedNoiseDistr");
 
 	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
 	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS());
 
-	  noiseGroupDistr =  (TH1*) inFile->Get("noiseDistrGroup");
+	  noiseGroupDistr = (TH1*) inFile->Get("noiseDistrGroup");
 
 	  noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseGroupDistr->GetRMS());
 	  noiseGroupGr->SetPointError(iRun, 0, noiseGroupDistr->GetRMSError());
 
-	  noisePairDistr =  (TH1*) inFile->Get("noiseDistrPair");
+	  noisePairDistr = (TH1*) inFile->Get("noiseDistrPair");
 
 	  noisePairGr->SetPoint(iRun, fabs(bias.at(iRun)), noisePairDistr->GetRMS());
 	  noisePairGr->SetPointError(iRun, 0, noisePairDistr->GetRMSError());
+
+	  intSeedDistr = (TH1*) inFile->Get("stripHPH_BGsub_integral"); // get the threshold to have 95 % efficiency
+	  for(int iBin = 1; iBin < intSeedDistr->GetNbinsX(); ++iBin)
+	    if(intSeedDistr->GetBinContent(iBin) > 0.05)
+	      {
+		eff95Gr->SetPoint(iRun, fabs(bias.at(iRun)), intSeedDistr->GetXaxis()->GetBinCenter(iBin));
+		eff95Gr->SetPointError(iRun, 0, intSeedDistr->GetXaxis()->GetBinWidth(iBin));
+
+		break;
+	      }
 
 	  resDir = (TDirectory*) inFile->Get("Residuals");
 	  resYDistr = (TH1*) resDir->Get("residualsY");
@@ -287,6 +312,7 @@ int main(int argc, char* argv[])
       noiseBiasVec.push_back(noiseGr);
       noiseGroupBiasVec.push_back(noiseGroupGr);
       noisePairBiasVec.push_back(noisePairGr);
+      eff95BiasVec.push_back(eff95Gr);
       resYBiasVec.push_back(resYGr);
 
     } // loop on the sensors
@@ -372,6 +398,10 @@ int main(int argc, char* argv[])
   snrAllSensors->SetName("snrAllSensors");
   snrAllSensors->SetTitle("SNR vs bias");
 
+  TMultiGraph* eff95AllSensors = new TMultiGraph();
+  eff95AllSensors->SetName("eff95AllSensors");
+  eff95AllSensors->SetTitle("Threshold to get 95% efficiency vs bias");
+
   TMultiGraph* resYAllSensors = new TMultiGraph();
   resYAllSensors->SetName("resYAllSensors");
   resYAllSensors->SetTitle("#sigma resduals Y vs bias");
@@ -396,7 +426,7 @@ int main(int argc, char* argv[])
     {
       maxFitBiasVec.at(i)->Draw("AP");
       maxFitBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      maxFitBiasVec.at(i)->GetYaxis()->SetTitle("Landau width [ADC]");
+      maxFitBiasVec.at(i)->GetYaxis()->SetTitle("Max of the fit [ADC]");
 
       maxFitAllSensors->Add(maxFitBiasVec.at(i));
     }
@@ -482,6 +512,19 @@ int main(int argc, char* argv[])
   snrAllSensors->Draw("AP");
   snrAllSensors->GetXaxis()->SetTitle("Bias [V]");
   snrAllSensors->GetYaxis()->SetTitle("SNR");
+
+  for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
+    {
+      eff95BiasVec.at(i)->Draw("AP");
+      eff95BiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [ADC]");
+
+      eff95AllSensors->Add(eff95BiasVec.at(i));
+    }
+
+  eff95AllSensors->Draw("AP");
+  eff95AllSensors->GetXaxis()->SetTitle("Bias [V]");
+  eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC]");
 
   for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
     {
@@ -610,6 +653,20 @@ int main(int argc, char* argv[])
   snrAllSenCan->Modified();
   snrAllSenCan->Update();
   snrAllSenCan->Write();
+
+  for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
+    eff95BiasVec.at(i)->Write();
+  eff95AllSensors->Write();
+
+  TCanvas* eff95AllSenCan = new TCanvas("eff95AllSenCan");
+  eff95AllSensors->Draw("APL");
+  leg = eff95AllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  eff95AllSenCan->SetGridx();
+  eff95AllSenCan->SetGridy();
+  eff95AllSenCan->Modified();
+  eff95AllSenCan->Update();
+  eff95AllSenCan->Write();
 
   for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
     resYBiasVec.at(i)->Write();
