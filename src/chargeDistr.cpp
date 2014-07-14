@@ -700,12 +700,13 @@ int main(int argc, char* argv[])
   // gausLanGausFitFixGaus(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
   //           		noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
-  lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
+  //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
-  //lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
+  gausLanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   // gausLanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit); 
   // gausLanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
