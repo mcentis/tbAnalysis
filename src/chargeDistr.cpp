@@ -280,6 +280,7 @@ int main(int argc, char* argv[])
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 561, -50.5, 511.5);
+  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
@@ -351,6 +352,8 @@ int main(int argc, char* argv[])
 
   int highestPHstrip = -1; // strip with the highest ph in the hit
   double phHighestStrip = 0; // charge on the strip with the highest charge
+
+  double noiseHPH = 0; // to calculate the background for the signal distribution of the strip with highest ph
 
   double phR = -1; // variables for the eta distribution
   double phL = -1;
@@ -424,24 +427,31 @@ int main(int argc, char* argv[])
 	      	  }
 
 	      noiseSum = 0;
+	      noiseHPH = -1e3;
 	      for(int iCh = 0; iCh < nChannels; ++iCh) // fill the histo of noise for grouped channels
 	      	{
 	      	  if(evtAliPH[iCh] == 0 || goodNoise[iCh] == false) // bad channels or channels belonging to a hit
 		    {
 		      summed = 0;
 		      noiseSum = 0;
+		      noiseHPH = -1e3;
 		    }
 		  else
 		    {
 		      noiseSum += evtAliPH[iCh];
 		      summed++;
+
+		      if(evtAliPH[iCh] * polarity > noiseHPH)
+			noiseHPH = evtAliPH[iCh] * polarity;
 		    }
 
 		  if(summed == maxDist * 2 + 1)
 		    {
 		      noiseDistrGroup->Fill(noiseSum * polarity);
+		      backgroundDistrHPH->Fill(noiseHPH);
 		      summed = 0;
 		      noiseSum = 0;
+		      noiseHPH = -1e3;
 		    }
 	      	} // noise over group of channels
 
@@ -585,7 +595,7 @@ int main(int argc, char* argv[])
 		    }
 		  diffExtraStripHPHvsPH->Fill(highestCharge * polarity, hiChargeCh - highestPHstrip);
 
-		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// find the strip with the highest ph in the hit
+		  for(int iCh = hiChargeCh - maxDist; iCh <= hiChargeCh + maxDist; ++iCh)// ph around strip hph and extrapolated strip
 		    if(iCh >=0 && iCh < nChannels) // protect array margins
 		      {
 			phAroundHPHstripTimeCut->Fill(iCh - highestPHstrip, evtAliPH[iCh] * polarity);
@@ -897,6 +907,7 @@ int main(int argc, char* argv[])
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
   noiseDistrTimeCut->Write();
+  backgroundDistrHPH->Write();
   stripHPHDistrTimeCut->Write();
   stripHPHDistrTimeCutDistCut->Write();
   stripHPH_plusNeigh_DistrTimeCutDistCut->Write();
