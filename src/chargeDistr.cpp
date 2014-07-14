@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 561, -50.5, 511.5);
-  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 201, -100.5, 100.5);
+  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 561, -50.5, 511.5);
   TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 151, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 151, -50.5, 511.5);
@@ -702,7 +702,7 @@ int main(int argc, char* argv[])
 
   lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
-  lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  //lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
@@ -817,6 +817,36 @@ int main(int argc, char* argv[])
   TH1D* chargeMapNormProjY = chargeMapNormalized->ProjectionY("chargeMapNormProjY");
   chargeMapNormProjY->SetTitle("Y projection of the normalized charge distribution");
 
+  // background subtraction for the strip with highest PH
+  double bgMean = backgroundDistrHPH->GetMean();
+  double bgRMS = backgroundDistrHPH->GetRMS();
+  int binStart = backgroundDistrHPH->GetXaxis()->FindBin(bgMean - 2 * bgRMS);
+  int binStop = backgroundDistrHPH->GetXaxis()->FindBin(bgMean + bgRMS);
+  double bgInt = backgroundDistrHPH->Integral(binStart, binStop);
+  double sigPlusBgInt = stripHPHDistrTimeCutDistCut->Integral(binStart, binStop);
+  TH1D* stripHPHDistrTimeCutDistCut_BGsub = new TH1D(*stripHPHDistrTimeCutDistCut);
+  stripHPHDistrTimeCutDistCut_BGsub->SetName("stripHPHDistrTimeCutDistCut_BGsub");
+  stripHPHDistrTimeCutDistCut_BGsub->SetTitle("Signal distr strip Hi PH time cut dist cut, bg subtracted;Signal [ADC];Entries");
+
+  backgroundDistrHPH->Sumw2();
+  stripHPHDistrTimeCutDistCut_BGsub->Sumw2();
+  stripHPHDistrTimeCutDistCut_BGsub->Add(backgroundDistrHPH, -1 * sigPlusBgInt / bgInt);
+
+  // normalized histo from the stripHPH with cuts and bg subtraction
+  TH1D* stripHPH_BGsub_integral = new TH1D(*stripHPHDistrTimeCutDistCut_BGsub);
+  stripHPH_BGsub_integral->SetName("stripHPH_BGsub_integral");
+  stripHPH_BGsub_integral->SetTitle("Normalized integral of the strip with Hi PH, with cuts and BG subtracted;Signal [ADC];Integral");
+  binStart = 1;
+  binStop = stripHPHDistrTimeCutDistCut_BGsub->GetXaxis()->GetNbins();
+  double totArea = stripHPHDistrTimeCutDistCut_BGsub->Integral(binStart, binStop);
+  double intBin = 0;
+
+  for(int i = binStart; i < binStop + 1; ++i)
+    {
+      intBin = stripHPHDistrTimeCutDistCut_BGsub->Integral(binStart, i);
+      stripHPH_BGsub_integral->SetBinContent(i, intBin / totArea);
+    }
+
   // draw graphs to name the axis
   TCanvas* servCan = new TCanvas("servCan");
   servCan->cd();
@@ -910,6 +940,8 @@ int main(int argc, char* argv[])
   backgroundDistrHPH->Write();
   stripHPHDistrTimeCut->Write();
   stripHPHDistrTimeCutDistCut->Write();
+  stripHPHDistrTimeCutDistCut_BGsub->Write();
+  stripHPH_BGsub_integral->Write();
   stripHPH_plusNeigh_DistrTimeCutDistCut->Write();
   stripHPHDiffExtra->Write();
   stripHPHSignalTime->Write();
