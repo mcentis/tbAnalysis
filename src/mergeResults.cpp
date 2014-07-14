@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
     std::cout << sensorType.at(i) << '\t' << fluences.at(i) << '\t' << runList.at(i) << std::endl;
   std::cout << "If too many sensors appear, have a look for empty lines in the lists" << std::endl;
 
+  std::vector<TGraphErrors*> maxFitBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec;
   std::vector<TGraphErrors*> lanWBiasVec;
   std::vector<TGraphErrors*> gSigBiasVec;
@@ -78,6 +79,7 @@ int main(int argc, char* argv[])
   TH1* noisePairDistr;
   TH1* resYDistr;
   TDirectory* resDir;
+  TGraphErrors* maxFitGr;
   TGraphErrors* mpvGr;
   TGraphErrors* lanWGr;
   TGraphErrors* gSigGr;
@@ -134,6 +136,18 @@ int main(int argc, char* argv[])
       if(iColor - 1 == 0) linStyle++;
       mpvGr->SetLineStyle(linStyle);
       mpvGr->SetLineWidth(2);
+
+      sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      maxFitGr = new TGraphErrors();
+      maxFitGr->SetName(name);
+      maxFitGr->SetTitle(title);
+      maxFitGr->SetMarkerStyle(8);
+      maxFitGr->SetFillColor(kWhite);
+      maxFitGr->SetLineColor(iColor); // set line color and style
+      maxFitGr->SetMarkerColor(iColor);
+      maxFitGr->SetLineStyle(linStyle);
+      maxFitGr->SetLineWidth(2);
 
       sprintf(name, "lanW_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -232,6 +246,8 @@ int main(int argc, char* argv[])
 	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
 	  mpvGr->SetPointError(iRun, 0, func->GetParError(3));
 
+	  maxFitGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetMaximumX());
+
 	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
 	  lanWGr->SetPointError(iRun, 0, func->GetParError(2));
 
@@ -265,6 +281,7 @@ int main(int argc, char* argv[])
 
 
       mpvBiasVec.push_back(mpvGr);
+      maxFitBiasVec.push_back(maxFitGr);
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
       noiseBiasVec.push_back(noiseGr);
@@ -327,6 +344,10 @@ int main(int argc, char* argv[])
   mpvAllSensors->SetName("mpvAllSensors");
   mpvAllSensors->SetTitle("MPV vs bias");
 
+  TMultiGraph* maxFitAllSensors = new TMultiGraph();
+  maxFitAllSensors->SetName("maxFitAllSensors");
+  maxFitAllSensors->SetTitle("Maximum of the fit function");
+
   TMultiGraph* lanWAllSensors = new TMultiGraph();
   lanWAllSensors->SetName("lanWAllSensors");
   lanWAllSensors->SetTitle("Landau width vs bias");
@@ -370,6 +391,19 @@ int main(int argc, char* argv[])
   mpvAllSensors->Draw("AP");
   mpvAllSensors->GetXaxis()->SetTitle("Bias [V]");
   mpvAllSensors->GetYaxis()->SetTitle("Landau MPV [ADC]");
+
+  for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
+    {
+      maxFitBiasVec.at(i)->Draw("AP");
+      maxFitBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      maxFitBiasVec.at(i)->GetYaxis()->SetTitle("Landau width [ADC]");
+
+      maxFitAllSensors->Add(maxFitBiasVec.at(i));
+    }
+
+  maxFitAllSensors->Draw("AP");
+  maxFitAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  maxFitAllSensors->GetYaxis()->SetTitle("Max of the fit [ADC]");
 
   for(unsigned int i = 0; i < lanWBiasVec.size(); ++i) // loop on the graphs
     {
@@ -478,6 +512,20 @@ int main(int argc, char* argv[])
   mpvAllSenCan->Modified();
   mpvAllSenCan->Update();
   mpvAllSenCan->Write();
+
+  for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
+    maxFitBiasVec.at(i)->Write();
+  maxFitAllSensors->Write();
+
+  TCanvas* maxFitAllSenCan = new TCanvas("maxFitAllSenCan");
+  maxFitAllSensors->Draw("APL");
+  leg = maxFitAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  maxFitAllSenCan->SetGridx();
+  maxFitAllSenCan->SetGridy();
+  maxFitAllSenCan->Modified();
+  maxFitAllSenCan->Update();
+  maxFitAllSenCan->Write();
 
   for(unsigned int i = 0; i < lanWBiasVec.size(); ++i) // loop on the graphs
     lanWBiasVec.at(i)->Write();

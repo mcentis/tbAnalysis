@@ -166,6 +166,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   plhi[0]=20.0; plhi[1]=200.0; plhi[2]=10000000.0; plhi[3]=gausSig;
 
   TF1* ffit = new TF1("lanGausFit", langaufun, fr[0], fr[1], 4);
+  //  ffit->SetNpx(1e4);
   ffit->SetParameters(sv);
   ffit->SetParNames("Width","MPV","Area","GSigma");
   ffit->SetLineColor(kRed);
@@ -225,6 +226,7 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
   double fitR2 = inHist->GetXaxis()->GetXmax();
 
   TF1* gausLang = new TF1("gausLang", gausLangaufun, fitR1, fitR2, nPars);
+  gausLang->SetNpx(1e4);
   gausLang->SetParameters(par);
   gausLang->SetParNames("ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma");
   for(int i = 0; i < nPars; ++i)
@@ -274,6 +276,7 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
   double fitR2 = inHist->GetXaxis()->GetXmax();
 
   TF1* gausLang = new TF1("gausLang", gausLangaufun, fitR1, fitR2, nPars);
+  gausLang->SetNpx(1e4);
   gausLang->SetParameters(par);
   gausLang->SetParNames("ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma");
   for(int i = 0; i < nPars; ++i)
