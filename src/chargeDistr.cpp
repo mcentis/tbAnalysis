@@ -850,6 +850,20 @@ int main(int argc, char* argv[])
       stripHPH_BGsub_integral->SetBinContent(i, intBin / totArea);
     }
 
+  // normalized histo of the noise distribution
+  TH1D* noiseDistr_integral = new TH1D(*noiseDistr);
+  noiseDistr_integral->SetName("noiseDistr_integral");
+  noiseDistr_integral->SetTitle("Normalized integral of the single strip noise (all the strips of the sensor);Noise [ADC];Integral");
+  binStart = 1;
+  binStop = noiseDistr->GetXaxis()->GetNbins();
+  totArea = noiseDistr->Integral(binStart, binStop);
+
+  for(int i = binStart; i < binStop + 1; ++i)
+    {
+      intBin = noiseDistr->Integral(binStart, i);
+      noiseDistr_integral->SetBinContent(i, intBin / totArea);
+    }
+
   // draw graphs to name the axis
   TCanvas* servCan = new TCanvas("servCan");
   servCan->cd();
@@ -935,6 +949,7 @@ int main(int argc, char* argv[])
   chi2SliceFit->Write();
   signalDistr->Write();
   noiseDistr->Write();
+  noiseDistr_integral->Write();
   noiseDistrGroup->Write();
   noiseDistrPair->Write();
   signalDistrTimeCut->Write();
