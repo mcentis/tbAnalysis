@@ -1,9 +1,14 @@
 void backgroundHPH(double sigma, int nChannels)
 {
+  // range and binning
+  const double loR = -20.5;
+  const double hiR = 20.5;
+  const double binW = 0.1;
+
   double noise;
   double highestNoise = 0;
 
-  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 201, -100.5, 100.5);
+  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", (hiR - loR) / binW, loR, hiR);
 
   for(int iEvt = 0; iEvt < 100000; iEvt++)
     {
@@ -16,8 +21,21 @@ void backgroundHPH(double sigma, int nChannels)
 	}
       backgroundDistrHPH->Fill(highestNoise);
     }
+  backgroundDistrHPH->Sumw2();
+  backgroundDistrHPH->Scale(1 / backgroundDistrHPH->GetEntries()); // normalize the thing
 
-  backgroundDistrHPH->Draw();
+  TCanvas* numCan = new TCanvas("numCan", "numerical generation");
+  backgroundDistrHPH->Draw("hist");
+
+  TF1* backgroundProbHPH = new TF1("backgroundProbHPH", "[1] * TMath::Gaus(x, 0, [0], 1) * TMath::Power(0.5 * (1 + TMath::Erf(x / ([0] * TMath::Sqrt(2)))), [1] - 1)", loR, hiR);
+  backgroundProbHPH->SetParameter(0, sigma);
+  backgroundProbHPH->SetParameter(1, nChannels);
+  backgroundProbHPH->SetNpx(1e5);
+
+  TCanvas* anaCan = new TCanvas("anaCan", "analitical derivation");
+  backgroundProbHPH->Draw();
+
+  std::cout << "Integral of the analitical form: " << backgroundProbHPH->Integral(loR, hiR) << std::endl;
 
   return;
 }
