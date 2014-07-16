@@ -704,7 +704,7 @@ int main(int argc, char* argv[])
 
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
-  lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  // lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
@@ -784,6 +784,17 @@ int main(int argc, char* argv[])
   fit = new TF1("gausFit", "gaus", noiseDistrPair->GetMean() - 2 * noiseDistrPair->GetRMS(), noiseDistrPair->GetMean() + 1 * noiseDistrPair->GetRMS());
   noiseDistrPair->Fit(fit, "RQ");
 
+  // fit of the background strip hph distribution
+  TF1* fit_bg = new TF1("fit_bg", "[2] * [1] * TMath::Gaus(x, 0, [0], 1) * TMath::Power(0.5 * (1 + TMath::Erf(x / ([0] * TMath::Sqrt(2)))), [1] - 1)");
+  fit_bg->SetParameter(0, fittedNoiseDistr->GetMean());
+  fit_bg->FixParameter(1, 2 * maxDist + 1); // fixed parameter
+  fit_bg->SetParameter(2, backgroundDistrHPH->GetMaximum());
+  fit_bg->SetRange(backgroundDistrHPH->GetMean() - 2 * backgroundDistrHPH->GetRMS(), backgroundDistrHPH->GetMean() + 1 * backgroundDistrHPH->GetRMS());
+  // backgroundDistrHPH->Fit(fit_bg, "RQ");
+  // double fitSig = fit_bg->GetParameter(0);
+  // fit_bg->FixParameter(0, fitSig);
+  stripHPHDistrTimeCutDistCut->Fit(fit_bg, "RQ");
+
   delete fitCan;
 
   double chargeSum;
@@ -835,7 +846,15 @@ int main(int argc, char* argv[])
   stripHPHDistrTimeCutDistCut_BGsub->Sumw2();
   stripHPHDistrTimeCutDistCut_BGsub->Add(backgroundDistrHPH, -1 * sigPlusBgInt / bgInt);
 
-  // normalized histo from the stripHPH with cuts and bg subtraction
+  // background subtraction using fitted function
+  TH1D* stripHPHDistrTimeCutDistCut_BGsub_fromFit = new TH1D(*stripHPHDistrTimeCutDistCut);
+  stripHPHDistrTimeCutDistCut_BGsub_fromFit->SetName("stripHPHDistrTimeCutDistCut_BGsub_fromFit");
+  stripHPHDistrTimeCutDistCut_BGsub_fromFit->SetTitle("Signal distr strip Hi PH time cut dist cut, bg subtracted usinf the fitted bg;Signal [ADC];Entries");
+  stripHPHDistrTimeCutDistCut_BGsub_fromFit->Sumw2();
+  fit_bg->SetRange(-1000, 1000);
+  stripHPHDistrTimeCutDistCut_BGsub_fromFit->Add(fit_bg, -1);
+
+  // normalized integral from the stripHPH with cuts and bg subtraction
   TH1D* stripHPH_BGsub_integral = new TH1D(*stripHPHDistrTimeCutDistCut_BGsub);
   stripHPH_BGsub_integral->SetName("stripHPH_BGsub_integral");
   stripHPH_BGsub_integral->SetTitle("Normalized integral of the strip with Hi PH, with cuts and BG subtracted;Signal [ADC];Integral");
@@ -960,6 +979,7 @@ int main(int argc, char* argv[])
   stripHPHDistrTimeCutDistCut->Write();
   stripHPHDistrTimeCutDistCut_BGsub->Write();
   stripHPH_BGsub_integral->Write();
+  stripHPHDistrTimeCutDistCut_BGsub_fromFit->Write();
   stripHPH_plusNeigh_DistrTimeCutDistCut->Write();
   stripHPHDiffExtra->Write();
   stripHPHSignalTime->Write();
