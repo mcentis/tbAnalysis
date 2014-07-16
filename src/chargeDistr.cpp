@@ -784,7 +784,7 @@ int main(int argc, char* argv[])
   fit = new TF1("gausFit", "gaus", noiseDistrPair->GetMean() - 2 * noiseDistrPair->GetRMS(), noiseDistrPair->GetMean() + 1 * noiseDistrPair->GetRMS());
   noiseDistrPair->Fit(fit, "RQ");
 
-  // fit of the background strip hph distribution
+  // fit of the background strip hph distribution, for derivation see logbook entry 16.07.2014
   TF1* fit_bg = new TF1("fit_bg", "[2] * [1] * TMath::Gaus(x, 0, [0], 1) * TMath::Power(0.5 * (1 + TMath::Erf(x / ([0] * TMath::Sqrt(2)))), [1] - 1)");
   fit_bg->SetParameter(0, fittedNoiseDistr->GetMean());
   fit_bg->FixParameter(1, 2 * maxDist + 1); // fixed parameter

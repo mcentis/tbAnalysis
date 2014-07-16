@@ -42,6 +42,7 @@ void backgroundHPH(double sigma, int nChannels)
 
   std::cout << "Integral of the analitical form: " << backgroundProbHPH->Integral(loR, hiR) << std::endl;
 
+  // for derivation see logbook entry 16.07.2014
   TF1* fit_bg = new TF1("fit_bg", "[2] * [1] * TMath::Gaus(x, 0, [0], 1) * TMath::Power(0.5 * (1 + TMath::Erf(x / ([0] * TMath::Sqrt(2)))), [1] - 1)", loR, hiR);
   fit_bg->SetParameter(0, 1);
   fit_bg->SetParameter(1, nChannels);
