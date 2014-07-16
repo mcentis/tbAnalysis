@@ -64,6 +64,9 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> noisePairBiasVec;
   std::vector<TGraphErrors*> eff95BiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
+
+  std::vector<TCanvas*> histSupVec; // canvases with the superimposition of the used histos
+
   std::vector<double> bias;
   std::vector<double> angle;
   std::vector<int> run;
@@ -90,11 +93,13 @@ int main(int argc, char* argv[])
   TGraphErrors* noisePairGr;
   TGraphErrors* eff95Gr;
   TGraphErrors* resYGr;
+  TCanvas* histSupCan; // each sensor gets a canvas
 
   char name[200];
   char title[500];
   int linStyle = 0;
   int iColor = 0; // color of the graphs
+  int iColHist = 0; // color for the histograms
 
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
@@ -236,6 +241,12 @@ int main(int argc, char* argv[])
       resYGr->SetLineStyle(linStyle);
       resYGr->SetLineWidth(2);
 
+      sprintf(name, "histSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "Distributions at different biases %s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      histSupCan = new TCanvas(name, title);
+      histSupCan->SetGridx();
+      histSupCan->SetGridy();
+
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
 	{
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
@@ -301,7 +312,17 @@ int main(int argc, char* argv[])
 	  resYGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
 	  resYGr->SetPointError(iRun, 0, func->GetParError(2));
 
-	  inFile->Close();
+	  iColHist = iRun % 9 + 1;
+	  if(iColHist == 5) ++iColHist; // skip yellow
+	  chDistr->SetLineColor(iColHist);
+	  sprintf(title, "%.00f", bias.at(iRun));
+	  chDistr->SetTitle(title);
+	  chDistr->SetLineWidth(2);
+	  histSupCan->cd();
+	  if(iRun == 0) chDistr->Draw("hist");
+	  else chDistr->Draw("histsame");
+
+	  //inFile->Close(); // do not close the files, otherwise the canvas does not find the histos to draw and save
 	} // loop on the runs for a sensor
 
 
@@ -314,6 +335,7 @@ int main(int argc, char* argv[])
       noisePairBiasVec.push_back(noisePairGr);
       eff95BiasVec.push_back(eff95Gr);
       resYBiasVec.push_back(resYGr);
+      histSupVec.push_back(histSupCan);
 
     } // loop on the sensors
 
@@ -681,6 +703,13 @@ int main(int argc, char* argv[])
   resYAllSenCan->Modified();
   resYAllSenCan->Update();
   resYAllSenCan->Write();
+
+  for(unsigned int i = 0; i < histSupVec.size(); ++i)
+    {
+      leg = histSupVec.at(i)->BuildLegend();
+      leg->SetFillColor(kWhite);
+      histSupVec.at(i)->Write();
+    }
 
   outFile->Close();
 
