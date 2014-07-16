@@ -21,6 +21,11 @@ void backgroundHPH(double sigma, int nChannels)
 	}
       backgroundDistrHPH->Fill(highestNoise);
     }
+
+  TH1D* bgNotNorm = new TH1D(*backgroundDistrHPH); // copy to test the fit function
+  bgNotNorm->SetName("bgNotNorm");
+  bgNotNorm->SetTitle("Backgorund distribution of the strip with highest PH;Signal [ADC];Entries");
+
   backgroundDistrHPH->Sumw2();
   backgroundDistrHPH->Scale(1 / backgroundDistrHPH->GetEntries()); // normalize the thing
 
@@ -36,6 +41,15 @@ void backgroundHPH(double sigma, int nChannels)
   backgroundProbHPH->Draw();
 
   std::cout << "Integral of the analitical form: " << backgroundProbHPH->Integral(loR, hiR) << std::endl;
+
+  TF1* fit_bg = new TF1("fit_bg", "[2] * [1] * TMath::Gaus(x, 0, [0], 1) * TMath::Power(0.5 * (1 + TMath::Erf(x / ([0] * TMath::Sqrt(2)))), [1] - 1)", loR, hiR);
+  fit_bg->SetParameter(0, 1);
+  fit_bg->SetParameter(1, nChannels);
+  fit_bg->SetParameter(2, bgNotNorm->GetMaximum());
+
+  TCanvas* fitCan = new TCanvas("fitCan", "test fit");
+  bgNotNorm->Draw();
+  bgNotNorm->Fit(fit_bg);
 
   return;
 }
