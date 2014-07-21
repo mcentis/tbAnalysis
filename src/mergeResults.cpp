@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
       mpvGr->SetMarkerStyle(8);
       mpvGr->SetFillColor(kWhite);
       iColor = i % 9 + 1;
-      if(iColor == 5) ++iColor; // skip yellow
+      if(iColor >= 5) ++iColor; // skip yellow
       mpvGr->SetLineColor(iColor); // set line color and style
       mpvGr->SetMarkerColor(iColor);
       if(iColor - 1 == 0) linStyle++;
