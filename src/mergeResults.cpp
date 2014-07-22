@@ -3,6 +3,7 @@
 #include "vector"
 #include "math.h"
 
+#include "TStyle.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TGraphErrors.h"
@@ -18,6 +19,18 @@ int main(int argc, char* argv[])
       std::cout << "Usage: mergeResults listOfLists dataDir" << std::endl;
       return 1;
     }
+
+  // big axis labels
+  gStyle->SetLabelSize(0.05, "x");
+  gStyle->SetLabelSize(0.05, "y");
+
+  gStyle->SetTitleSize(0.05, "x");
+  gStyle->SetTitleSize(0.05, "y");
+
+  gStyle->SetTitleOffset(0.95, "x");
+  gStyle->SetTitleOffset(0.95, "y");
+
+  gStyle->SetMarkerSize(2);
 
   char fileName[200];
   sprintf(fileName, "%s/mergedData.root", argv[2]);
@@ -99,6 +112,7 @@ int main(int argc, char* argv[])
   char title[500];
   int linStyle = 0;
   int iColor = 0; // color of the graphs
+  int mrkStyle = 0; // marker style
   int iColHist = 0; // color for the histograms
 
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
@@ -130,18 +144,55 @@ int main(int argc, char* argv[])
 	std::cout << bias.at(j) << '\t' << angle.at(j) << '\t' << run.at(j) << std::endl;
       std::cout << "If too many runs appear, have a look for empty lines in the lists" << std::endl;
 
+      // iColor = i % 6 + 1; // use "good" colors
+      // if(iColor >= 5) ++iColor; // skip yellow
+      // if(iColor - 1 == 0) linStyle++;
+
+      // the symbol represents the sensor type: n, y, p
+      if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
+	mrkStyle = 20;
+      else if(sensorType.at(i)[6] == 'Y' || sensorType.at(i)[6] == 'y')
+	mrkStyle = 21;
+      else if(sensorType.at(i)[6] == 'N' || sensorType.at(i)[6] == 'n')
+	mrkStyle = 22;
+      else
+	{
+	  mrkStyle = 27;
+	  std::cout << "-------------------------------------------------------------------- Sensor type not recognized for " << sensorType.at(i) << std::endl;
+	}
+
+      // the color will represent the irradiation
+      if(fluences.at(i) == 0)
+	{
+	  iColor = kRed;
+	  mrkStyle += 4; // open symbols for the non irradiated devices (works if NPY was recognized...)
+	}
+      else if(fluences.at(i) == 1.e15)
+	iColor = 8; // a bit datker than kGreen
+      else if(fluences.at(i) == 1.5e15)
+	iColor = kBlack;
+      else if(fluences.at(i) == 3e15)
+	iColor = kBlue;
+      else if(fluences.at(i) == 1.3e16)
+	iColor = kRed;
+      else
+	{
+	  iColor = 6;
+	  std::cout << "-------------------------------------------------------------------- Fluence not recognized for " << sensorType.at(i) << std::endl;
+	}
+
+      // the line represents the thickness, if needed
+      linStyle = 9;
+
       sprintf(name, "mpv_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       mpvGr = new TGraphErrors();
       mpvGr->SetName(name);
       mpvGr->SetTitle(title);
-      mpvGr->SetMarkerStyle(8);
+      mpvGr->SetMarkerStyle(mrkStyle);
       mpvGr->SetFillColor(kWhite);
-      iColor = i % 9 + 1;
-      if(iColor >= 5) ++iColor; // skip yellow
       mpvGr->SetLineColor(iColor); // set line color and style
       mpvGr->SetMarkerColor(iColor);
-      if(iColor - 1 == 0) linStyle++;
       mpvGr->SetLineStyle(linStyle);
       mpvGr->SetLineWidth(2);
 
@@ -150,7 +201,7 @@ int main(int argc, char* argv[])
       maxFitGr = new TGraphErrors();
       maxFitGr->SetName(name);
       maxFitGr->SetTitle(title);
-      maxFitGr->SetMarkerStyle(8);
+      maxFitGr->SetMarkerStyle(mrkStyle);
       maxFitGr->SetFillColor(kWhite);
       maxFitGr->SetLineColor(iColor); // set line color and style
       maxFitGr->SetMarkerColor(iColor);
@@ -162,7 +213,7 @@ int main(int argc, char* argv[])
       lanWGr = new TGraphErrors();
       lanWGr->SetName(name);
       lanWGr->SetTitle(title);
-      lanWGr->SetMarkerStyle(8);
+      lanWGr->SetMarkerStyle(mrkStyle);
       lanWGr->SetFillColor(kWhite);
       lanWGr->SetLineColor(iColor); // set line color and style
       lanWGr->SetMarkerColor(iColor);
@@ -174,7 +225,7 @@ int main(int argc, char* argv[])
       gSigGr = new TGraphErrors();
       gSigGr->SetName(name);
       gSigGr->SetTitle(title);
-      gSigGr->SetMarkerStyle(8);
+      gSigGr->SetMarkerStyle(mrkStyle);
       gSigGr->SetFillColor(kWhite);
       gSigGr->SetLineColor(iColor); // set line color and style
       gSigGr->SetMarkerColor(iColor);
@@ -186,7 +237,7 @@ int main(int argc, char* argv[])
       noiseGr = new TGraphErrors();
       noiseGr->SetName(name);
       noiseGr->SetTitle(title);
-      noiseGr->SetMarkerStyle(8);
+      noiseGr->SetMarkerStyle(mrkStyle);
       noiseGr->SetFillColor(kWhite);
       noiseGr->SetLineColor(iColor); // set line color and style
       noiseGr->SetMarkerColor(iColor);
@@ -198,7 +249,7 @@ int main(int argc, char* argv[])
       noiseGroupGr = new TGraphErrors();
       noiseGroupGr->SetName(name);
       noiseGroupGr->SetTitle(title);
-      noiseGroupGr->SetMarkerStyle(8);
+      noiseGroupGr->SetMarkerStyle(mrkStyle);
       noiseGroupGr->SetFillColor(kWhite);
       noiseGroupGr->SetLineColor(iColor); // set line color and style
       noiseGroupGr->SetMarkerColor(iColor);
@@ -210,7 +261,7 @@ int main(int argc, char* argv[])
       noisePairGr = new TGraphErrors();
       noisePairGr->SetName(name);
       noisePairGr->SetTitle(title);
-      noisePairGr->SetMarkerStyle(8);
+      noisePairGr->SetMarkerStyle(mrkStyle);
       noisePairGr->SetFillColor(kWhite);
       noisePairGr->SetLineColor(iColor); // set line color and style
       noisePairGr->SetMarkerColor(iColor);
@@ -222,7 +273,7 @@ int main(int argc, char* argv[])
       eff95Gr = new TGraphErrors();
       eff95Gr->SetName(name);
       eff95Gr->SetTitle(title);
-      eff95Gr->SetMarkerStyle(8);
+      eff95Gr->SetMarkerStyle(mrkStyle);
       eff95Gr->SetFillColor(kWhite);
       eff95Gr->SetLineColor(iColor); // set line color and style
       eff95Gr->SetMarkerColor(iColor);
@@ -234,7 +285,7 @@ int main(int argc, char* argv[])
       resYGr = new TGraphErrors();
       resYGr->SetName(name);
       resYGr->SetTitle(title);
-      resYGr->SetMarkerStyle(8);
+      resYGr->SetMarkerStyle(mrkStyle);
       resYGr->SetFillColor(kWhite);
       resYGr->SetLineColor(iColor); // set line color and style
       resYGr->SetMarkerColor(iColor);
@@ -363,7 +414,7 @@ int main(int argc, char* argv[])
       snrGr = new TGraphErrors();
       snrGr->SetName(name);
       snrGr->SetTitle(title);
-      snrGr->SetMarkerStyle(8);
+      snrGr->SetMarkerStyle(mpvGr->GetMarkerStyle());
       snrGr->SetFillColor(kWhite);
       snrGr->SetLineColor(mpvGr->GetLineColor()); // set line color and style
       snrGr->SetMarkerColor(mpvGr->GetMarkerColor());
