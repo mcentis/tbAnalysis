@@ -4,6 +4,7 @@
 #include "vector"
 
 #include "TSystem.h"
+#include "TStyle.h"
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1I.h"
@@ -53,13 +54,23 @@ TF1* fitResiduals(TH1* inHist, double range1, double range2)
 
 int main(int argc, char* argv[])
 {
-  gSystem->Load("libTree"); // necessary to use the program, root magic
-
   if(argc != 3)
     {
       std::cout << "Usage: chargeDistr inFile confFile" << std::endl;
       return 1;
     }
+
+  gSystem->Load("libTree"); // necessary to use the program, root magic
+
+  // big axis labels
+  gStyle->SetLabelSize(0.05, "x");
+  gStyle->SetLabelSize(0.05, "y");
+
+  gStyle->SetTitleSize(0.05, "x");
+  gStyle->SetTitleSize(0.05, "y");
+
+  gStyle->SetTitleOffset(0.95, "x");
+  gStyle->SetTitleOffset(0.95, "y");
 
   TFile* inFile = TFile::Open(argv[1]);
   if (!inFile)
