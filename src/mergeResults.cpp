@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 	  mrkStyle += 4; // open symbols for the non irradiated devices (works if NPY was recognized...)
 	}
       else if(fluences.at(i) == 1.e15)
-	iColor = 8; // a bit datker than kGreen
+	iColor = kGreen;// in case it is too bright use 8
       else if(fluences.at(i) == 1.5e15)
 	iColor = kBlack;
       else if(fluences.at(i) == 3e15)
