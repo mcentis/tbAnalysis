@@ -31,6 +31,7 @@ int main(int argc, char* argv[])
   gStyle->SetTitleOffset(0.95, "y");
 
   gStyle->SetMarkerSize(2);
+  gStyle->SetLineWidth(1);
 
   char fileName[200];
   sprintf(fileName, "%s/mergedData.root", argv[2]);
@@ -194,7 +195,6 @@ int main(int argc, char* argv[])
       mpvGr->SetLineColor(iColor); // set line color and style
       mpvGr->SetMarkerColor(iColor);
       mpvGr->SetLineStyle(linStyle);
-      mpvGr->SetLineWidth(2);
 
       sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -206,7 +206,6 @@ int main(int argc, char* argv[])
       maxFitGr->SetLineColor(iColor); // set line color and style
       maxFitGr->SetMarkerColor(iColor);
       maxFitGr->SetLineStyle(linStyle);
-      maxFitGr->SetLineWidth(2);
 
       sprintf(name, "lanW_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -218,7 +217,6 @@ int main(int argc, char* argv[])
       lanWGr->SetLineColor(iColor); // set line color and style
       lanWGr->SetMarkerColor(iColor);
       lanWGr->SetLineStyle(linStyle);
-      lanWGr->SetLineWidth(2);
 
       sprintf(name, "gSig_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -230,7 +228,6 @@ int main(int argc, char* argv[])
       gSigGr->SetLineColor(iColor); // set line color and style
       gSigGr->SetMarkerColor(iColor);
       gSigGr->SetLineStyle(linStyle);
-      gSigGr->SetLineWidth(2);
 
       sprintf(name, "noise_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -242,7 +239,6 @@ int main(int argc, char* argv[])
       noiseGr->SetLineColor(iColor); // set line color and style
       noiseGr->SetMarkerColor(iColor);
       noiseGr->SetLineStyle(linStyle);
-      noiseGr->SetLineWidth(2);
 
       sprintf(name, "noiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -254,7 +250,6 @@ int main(int argc, char* argv[])
       noiseGroupGr->SetLineColor(iColor); // set line color and style
       noiseGroupGr->SetMarkerColor(iColor);
       noiseGroupGr->SetLineStyle(linStyle);
-      noiseGroupGr->SetLineWidth(2);
 
       sprintf(name, "noisePair_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -266,7 +261,6 @@ int main(int argc, char* argv[])
       noisePairGr->SetLineColor(iColor); // set line color and style
       noisePairGr->SetMarkerColor(iColor);
       noisePairGr->SetLineStyle(linStyle);
-      noisePairGr->SetLineWidth(2);
 
       sprintf(name, "eff95_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -278,7 +272,6 @@ int main(int argc, char* argv[])
       eff95Gr->SetLineColor(iColor); // set line color and style
       eff95Gr->SetMarkerColor(iColor);
       eff95Gr->SetLineStyle(linStyle);
-      eff95Gr->SetLineWidth(2);
 
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -290,7 +283,6 @@ int main(int argc, char* argv[])
       resYGr->SetLineColor(iColor); // set line color and style
       resYGr->SetMarkerColor(iColor);
       resYGr->SetLineStyle(linStyle);
-      resYGr->SetLineWidth(2);
 
       sprintf(name, "histSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "Distributions at different biases %s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
@@ -368,7 +360,7 @@ int main(int argc, char* argv[])
 	  chDistr->SetLineColor(iColHist);
 	  sprintf(title, "%.00f", bias.at(iRun));
 	  chDistr->SetTitle(title);
-	  chDistr->SetLineWidth(2);
+	  //chDistr->SetLineWidth(2);
 	  histSupCan->cd();
 	  if(iRun == 0) chDistr->Draw("hist");
 	  else chDistr->Draw("histsame");
