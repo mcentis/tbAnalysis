@@ -106,6 +106,15 @@ int main(int argc, char* argv[])
   int maxEntryNum = atoi(conf->GetValue("maxEntryNum").c_str()); // max entry number to be processed
   int highestNeighbor = atoi(conf->GetValue("highestNeighbor").c_str()); // if not 0 only the highest neighbor is added to the hit charge
 
+  double scaleFactor;
+  if(atof(conf->GetValue("scaleFactor").c_str()) != 0)
+    {
+      scaleFactor = atof(conf->GetValue("scaleFactor").c_str());
+      std::cout << "================================================================>>> WARNING You are going to apply a scaling factor to the signal" <<std::endl;
+    }
+  else
+    scaleFactor = 1;
+
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
   //Declaration of leaves types
@@ -645,7 +654,7 @@ int main(int argc, char* argv[])
 	  trkVec.push_back(*trk);
 	  nTrks = 1;
 	  // store the alibava info of the event
-	  for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh];
+	  for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh] * scaleFactor; // a scale factor is applied on the need
 	  evtAliTime = alibava_TDC;
 	  evtAliTemp = alibava_temp;
 	}
