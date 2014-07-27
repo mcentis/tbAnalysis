@@ -106,14 +106,31 @@ int main(int argc, char* argv[])
   int maxEntryNum = atoi(conf->GetValue("maxEntryNum").c_str()); // max entry number to be processed
   int highestNeighbor = atoi(conf->GetValue("highestNeighbor").c_str()); // if not 0 only the highest neighbor is added to the hit charge
 
-  double scaleFactor;
-  if(atof(conf->GetValue("scaleFactor").c_str()) != 0)
+  double scaleFactor; // used in the track loop to apply temperature correction
+  // if(atof(conf->GetValue("scaleFactor").c_str()) != 0)
+  //   {
+  //     scaleFactor = atof(conf->GetValue("scaleFactor").c_str());
+  //     std::cout << "================================================================>>> WARNING You are going to apply a scaling factor to the signal, the single channel noise will not be scaled" << std::endl;
+  //   }
+  // else
+  //   scaleFactor = 1;
+
+  double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
+  double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
+  double tCorr_p2 = atof(conf->GetValue("tCorr_p2").c_str());
+  double targetChipTemp = atof(conf->GetValue("targetChipTemp").c_str());
+  double targetGain;
+  bool applyTcorr = false; // flag used in the loop on the tracks
+
+  if(tCorr_p0 || tCorr_p1 || tCorr_p2)
     {
-      scaleFactor = atof(conf->GetValue("scaleFactor").c_str());
-      std::cout << "================================================================>>> WARNING You are going to apply a scaling factor to the signal, the single channel noise will not be scaled" << std::endl;
+      targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp + tCorr_p2 * targetChipTemp * targetChipTemp;
+      applyTcorr = true;
+
+      std::cout << "=============================>>> WARNING a temperature correction is going to be applied to the signal, the single channel noise will not be corrected\n";
+      std::cout << "Target chip temperature " << targetChipTemp << std::endl;
+      std::cout << "Target gain " << targetGain << std::endl;
     }
-  else
-    scaleFactor = 1;
 
   TFile* outFile = new TFile(outFileName, "RECREATE");
 
@@ -656,10 +673,17 @@ int main(int argc, char* argv[])
 	  // store the first track of the event
 	  trkVec.push_back(*trk);
 	  nTrks = 1;
-	  // store the alibava info of the event
-	  for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh] * scaleFactor; // a scale factor is applied on the need
+	  // store event conditions
 	  evtAliTime = alibava_TDC;
 	  evtAliTemp = alibava_temp;
+
+	  if(applyTcorr) // determination of the temperature correction
+	    scaleFactor = targetGain / (tCorr_p0 + tCorr_p1 * evtAliTemp + tCorr_p2 * evtAliTemp * evtAliTemp);
+	  else 
+	    scaleFactor = 1;
+
+	  // store the PH from alibava
+	  for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh] * scaleFactor; // a scale factor is applied on the need
 	}
 
       delete trk;
