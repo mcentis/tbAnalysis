@@ -78,6 +78,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> noisePairBiasVec;
   std::vector<TGraphErrors*> eff95BiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
+  std::vector<TGraphErrors*> chipTempBiasVec;
 
   std::vector<TCanvas*> histSupVec; // canvases with the superimposition of the used histos
 
@@ -97,6 +98,7 @@ int main(int argc, char* argv[])
   TH1* noisePairDistr;
   TH1* intSeedDistr;
   TH1* resYDistr;
+  TH1* tempDistr;
   TDirectory* resDir;
   TGraphErrors* maxFitGr;
   TGraphErrors* mpvGr;
@@ -107,6 +109,7 @@ int main(int argc, char* argv[])
   TGraphErrors* noisePairGr;
   TGraphErrors* eff95Gr;
   TGraphErrors* resYGr;
+  TGraphErrors* chipTempGr;
   TCanvas* histSupCan; // each sensor gets a canvas
 
   char name[200];
@@ -284,6 +287,17 @@ int main(int argc, char* argv[])
       resYGr->SetMarkerColor(iColor);
       resYGr->SetLineStyle(linStyle);
 
+      sprintf(name, "chipTemp_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      chipTempGr = new TGraphErrors();
+      chipTempGr->SetName(name);
+      chipTempGr->SetTitle(title);
+      chipTempGr->SetMarkerStyle(mrkStyle);
+      chipTempGr->SetFillColor(kWhite);
+      chipTempGr->SetLineColor(iColor); // set line color and style
+      chipTempGr->SetMarkerColor(iColor);
+      chipTempGr->SetLineStyle(linStyle);
+
       sprintf(name, "histSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "Distributions at different biases %s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
       histSupCan = new TCanvas(name, title);
@@ -355,6 +369,11 @@ int main(int argc, char* argv[])
 	  resYGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
 	  resYGr->SetPointError(iRun, 0, func->GetParError(2));
 
+	  tempDistr = (TH1*) inFile->Get("tempDistr");
+	  chipTempGr->SetPoint(iRun, fabs(bias.at(iRun)), tempDistr->GetMean());
+	  chipTempGr->SetPointError(iRun, 0, tempDistr->GetRMS());
+
+
 	  iColHist = iRun % 9 + 1;
 	  if(iColHist == 5) ++iColHist; // skip yellow
 	  chDistr->SetLineColor(iColHist);
@@ -378,6 +397,7 @@ int main(int argc, char* argv[])
       noisePairBiasVec.push_back(noisePairGr);
       eff95BiasVec.push_back(eff95Gr);
       resYBiasVec.push_back(resYGr);
+      chipTempBiasVec.push_back(chipTempGr);
       histSupVec.push_back(histSupCan);
 
     } // loop on the sensors
@@ -470,6 +490,10 @@ int main(int argc, char* argv[])
   TMultiGraph* resYAllSensors = new TMultiGraph();
   resYAllSensors->SetName("resYAllSensors");
   resYAllSensors->SetTitle("#sigma resduals Y vs bias");
+
+  TMultiGraph* chipTempAllSensors = new TMultiGraph();
+  chipTempAllSensors->SetName("chipTempAllSensors");
+  chipTempAllSensors->SetTitle("Chip temperature");
 
   TCanvas* servCan = new TCanvas();
   servCan->SetName("servCan");
@@ -603,6 +627,19 @@ int main(int argc, char* argv[])
   resYAllSensors->Draw("AP");
   resYAllSensors->GetXaxis()->SetTitle("Bias [V]");
   resYAllSensors->GetYaxis()->SetTitle("#sigma res Y [mm]");
+
+  for(unsigned int i = 0; i < chipTempBiasVec.size(); ++i) // loop on the graphs
+    {
+      chipTempBiasVec.at(i)->Draw("AP");
+      chipTempBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      chipTempBiasVec.at(i)->GetYaxis()->SetTitle("Temperature [C]");
+
+      chipTempAllSensors->Add(chipTempBiasVec.at(i));
+    }
+
+  chipTempAllSensors->Draw("AP");
+  chipTempAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  chipTempAllSensors->GetYaxis()->SetTitle("Temperature [C]");
 
   delete servCan;
 
@@ -746,6 +783,20 @@ int main(int argc, char* argv[])
   resYAllSenCan->Modified();
   resYAllSenCan->Update();
   resYAllSenCan->Write();
+
+  for(unsigned int i = 0; i < chipTempBiasVec.size(); ++i) // loop on the graphs
+    chipTempBiasVec.at(i)->Write();
+  chipTempAllSensors->Write();
+
+  TCanvas* chipTempAllSenCan = new TCanvas("chipTempAllSenCan");
+  chipTempAllSensors->Draw("APL");
+  leg = chipTempAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  chipTempAllSenCan->SetGridx();
+  chipTempAllSenCan->SetGridy();
+  chipTempAllSenCan->Modified();
+  chipTempAllSenCan->Update();
+  chipTempAllSenCan->Write();
 
   for(unsigned int i = 0; i < histSupVec.size(); ++i)
     {
