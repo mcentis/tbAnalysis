@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
   if(atof(conf->GetValue("scaleFactor").c_str()) != 0)
     {
       scaleFactor = atof(conf->GetValue("scaleFactor").c_str());
-      std::cout << "================================================================>>> WARNING You are going to apply a scaling factor to the signal" <<std::endl;
+      std::cout << "================================================================>>> WARNING You are going to apply a scaling factor to the signal, the single channel noise will not be scaled" << std::endl;
     }
   else
     scaleFactor = 1;
@@ -444,7 +444,7 @@ int main(int argc, char* argv[])
 	      	if(goodNoise[iCh] && evtAliPH[iCh] != 0) // no ph == 0 and no ch belonging toany hit
 	      	  {
 	      	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
-	      	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity);
+	      	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity / scaleFactor);
 	      	  }
 
 	      noiseSum = 0;
@@ -855,7 +855,7 @@ int main(int argc, char* argv[])
   double bgMean = backgroundDistrHPH->GetMean();
   double bgRMS = backgroundDistrHPH->GetRMS();
   int binStart = backgroundDistrHPH->GetXaxis()->FindBin(bgMean - 2 * bgRMS);
-  int binStop = backgroundDistrHPH->GetXaxis()->FindBin(bgMean + bgRMS);
+  int binStop = backgroundDistrHPH->GetXaxis()->FindBin(bgMean + 0.7 * bgRMS);
   double bgInt = backgroundDistrHPH->Integral(binStart, binStop);
   double sigPlusBgInt = stripHPHDistrTimeCutDistCut->Integral(binStart, binStop);
   TH1D* stripHPHDistrTimeCutDistCut_BGsub = new TH1D(*stripHPHDistrTimeCutDistCut);
