@@ -328,7 +328,7 @@ int main(int argc, char* argv[])
   TH2D* chargeMapMod160 = new TH2D("chargeMapMod160", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
   TH2D* hitMapMod160 = new TH2D("hitMapMod160", "Hit map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
-  TH1D* etaDistrTimeCut = new TH1D("etaDistrTimeCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
+  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
   // charge collection map over the sensor in the time cut
   minX = -20;
@@ -597,7 +597,7 @@ int main(int argc, char* argv[])
 			  phL = evtAliPH[highestPHstrip - 1] * polarity;
 			  phR = phHighestStrip;
 			}
-		      etaDistrTimeCut->Fill(phR / (phR + phL));
+		      etaDistrTimeCutDistCut->Fill(phR / (phR + phL));
 
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 		    }
@@ -1026,7 +1026,7 @@ int main(int argc, char* argv[])
   chargeMapNormalized->Write();
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
-  etaDistrTimeCut->Write();
+  etaDistrTimeCutDistCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
