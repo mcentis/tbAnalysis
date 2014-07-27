@@ -315,6 +315,8 @@ int main(int argc, char* argv[])
   tempEvt->SetName("tempEvt");
   tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
 
+  TH1D* tempDistr = new TH1D("tempDistr", "Temperature of the beetle chip;Temperature [C];Events", 600, 0, 30);
+
   // three histos to get a map of charge collection over 2 strips in the time cut
   double minX = -20000;
   double maxX = 20000;
@@ -644,6 +646,7 @@ int main(int argc, char* argv[])
 		       
 		}
 	      tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
+	      tempDistr->Fill(evtAliTemp);
 	    } // the analysis of the event should be contained in this scope
 
 	  // set the counters
@@ -1012,6 +1015,7 @@ int main(int argc, char* argv[])
   phAroundExtraStripTimeCut->Write();
   correlationPHstripHPHhit->Write();
   tempEvt->Write();
+  tempDistr->Write();
   hitMapMod160->Write();
   chargeMapMod160->Write();
   chargeMapMod160Normalized->Write();
