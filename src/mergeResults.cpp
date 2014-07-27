@@ -326,7 +326,7 @@ int main(int argc, char* argv[])
 	  noiseDistr = (TH1*) inFile->Get("fittedNoiseDistr");
 
 	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
-	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS());
+	  noiseGr->SetPointError(iRun, 0, noiseDistr->GetRMS() / sqrt(noiseDistr->GetEntries()));
 
 	  noiseGroupDistr = (TH1*) inFile->Get("noiseDistrGroup");
 
