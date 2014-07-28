@@ -381,8 +381,8 @@ int main(int argc, char* argv[])
 	  chDistr->SetTitle(title);
 	  //chDistr->SetLineWidth(2);
 	  histSupCan->cd();
-	  if(iRun == 0) chDistr->Draw("hist");
-	  else chDistr->Draw("histsame");
+	  if(iRun == 0) chDistr->Draw("E");
+	  else chDistr->Draw("Esame");
 
 	  //inFile->Close(); // do not close the files, otherwise the canvas does not find the histos to draw and save
 	} // loop on the runs for a sensor
