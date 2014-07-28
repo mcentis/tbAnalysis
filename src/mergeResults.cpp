@@ -451,6 +451,124 @@ int main(int argc, char* argv[])
       snrBiasVec.push_back(snrGr);
     } // loop on the sensors
 
+  // study of correlations
+  std::vector<TGraphErrors*> corrMPVmaxFitVec;
+  std::vector<TGraphErrors*> corrWidthGsigFitVec;
+  std::vector<TGraphErrors*> corrNoiseGrGsigFitVec;
+
+  TMultiGraph* corrMPVmaxFit = new TMultiGraph();
+  corrMPVmaxFit->SetName("corrMPVmaxFit");
+  corrMPVmaxFit->SetTitle("Max fit vs Landau MPV");
+
+  TMultiGraph* corrWidthGsigFit = new TMultiGraph();
+  corrWidthGsigFit->SetName("corrWidthGsigFit");
+  corrWidthGsigFit->SetTitle("Gaus sigma fit vs Landau width");
+
+  TMultiGraph* corrNoiseGrGsigFit = new TMultiGraph();
+  corrNoiseGrGsigFit->SetName("corrNoiseGrGsigFit");
+  corrNoiseGrGsigFit->SetTitle("Gaus sigma fit vs noise group (RMS)");
+
+  double* y1;
+  double* y2;
+  double* eY1;
+  double* eY2;
+  TGraphErrors* corrGr;
+  TGraphErrors* gr1;
+  TGraphErrors* gr2;
+
+  for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors, for correlations
+    {
+      //------------------------------------------- landau mpv vs max of the fit
+      gr1 = mpvBiasVec.at(i);
+      gr2 = maxFitBiasVec.at(i);
+
+      sprintf(name, "corrMPVmaxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      corrGr = new TGraphErrors();
+      corrGr->SetName(name);
+      corrGr->SetTitle(title);
+      corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
+      corrGr->SetFillColor(kWhite);
+      corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetMarkerColor(gr1->GetMarkerColor());
+      corrGr->SetLineStyle(gr1->GetLineStyle());
+      //corrGr->SetLineWidth(2);
+
+      y1 = gr1->GetY();
+      eY1 = gr1->GetEY();
+      y2 = gr2->GetY();
+      eY2 = gr2->GetEY();
+
+      for(int iPoint = 0; iPoint < gr1->GetN(); ++iPoint)
+	{
+	  corrGr->SetPoint(iPoint, y1[iPoint], y2[iPoint]);
+	  corrGr->SetPointError(iPoint, eY1[iPoint], eY2[iPoint]);
+	}
+
+      corrMPVmaxFitVec.push_back(corrGr);
+      corrMPVmaxFit->Add(corrGr);
+
+      // -------------------------------------------------- landau width gaus sigma of the fit
+      gr1 = lanWBiasVec.at(i);
+      gr2 = gSigBiasVec.at(i);
+
+      sprintf(name, "corrLanWgausSigFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      corrGr = new TGraphErrors();
+      corrGr->SetName(name);
+      corrGr->SetTitle(title);
+      corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
+      corrGr->SetFillColor(kWhite);
+      corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetMarkerColor(gr1->GetMarkerColor());
+      corrGr->SetLineStyle(gr1->GetLineStyle());
+      //corrGr->SetLineWidth(2);
+
+      y1 = gr1->GetY();
+      eY1 = gr1->GetEY();
+      y2 = gr2->GetY();
+      eY2 = gr2->GetEY();
+
+      for(int iPoint = 0; iPoint < gr1->GetN(); ++iPoint)
+	{
+	  corrGr->SetPoint(iPoint, y1[iPoint], y2[iPoint]);
+	  corrGr->SetPointError(iPoint, eY1[iPoint], eY2[iPoint]);
+	}
+
+      corrWidthGsigFitVec.push_back(corrGr);
+      corrWidthGsigFit->Add(corrGr);
+
+      // -------------------------------------------- noise of group strips gaus sigma fit
+      gr1 = gSigBiasVec.at(i);
+      gr2 = noiseGroupBiasVec.at(i);
+
+      sprintf(name, "corrgSigNoiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      corrGr = new TGraphErrors();
+      corrGr->SetName(name);
+      corrGr->SetTitle(title);
+      corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
+      corrGr->SetFillColor(kWhite);
+      corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetMarkerColor(gr1->GetMarkerColor());
+      corrGr->SetLineStyle(gr1->GetLineStyle());
+      //corrGr->SetLineWidth(2);
+
+      y1 = gr1->GetY();
+      eY1 = gr1->GetEY();
+      y2 = gr2->GetY();
+      eY2 = gr2->GetEY();
+
+      for(int iPoint = 0; iPoint < gr1->GetN(); ++iPoint)
+	{
+	  corrGr->SetPoint(iPoint, y1[iPoint], y2[iPoint]);
+	  corrGr->SetPointError(iPoint, eY1[iPoint], eY2[iPoint]);
+	}
+
+      corrNoiseGrGsigFitVec.push_back(corrGr);
+      corrNoiseGrGsigFit->Add(corrGr);
+    }
+
   TMultiGraph* mpvAllSensors = new TMultiGraph();
   mpvAllSensors->SetName("mpvAllSensors");
   mpvAllSensors->SetTitle("MPV vs bias");
@@ -641,6 +759,19 @@ int main(int argc, char* argv[])
   chipTempAllSensors->GetXaxis()->SetTitle("Bias [V]");
   chipTempAllSensors->GetYaxis()->SetTitle("Temperature [C]");
 
+  // correlations graphs
+  corrMPVmaxFit->Draw("AP");
+  corrMPVmaxFit->GetXaxis()->SetTitle("Landau MPV [ADC]");
+  corrMPVmaxFit->GetYaxis()->SetTitle("Max fit function [ADC]");
+
+  corrWidthGsigFit->Draw("AP");
+  corrWidthGsigFit->GetXaxis()->SetTitle("Landau width [ADC]");
+  corrWidthGsigFit->GetYaxis()->SetTitle("G sigma fit function [ADC]");
+
+  corrNoiseGrGsigFit->Draw("AP");
+  corrNoiseGrGsigFit->GetXaxis()->SetTitle("G sigma fit function [ADC]");
+  corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (RMS) [ADC]");
+
   delete servCan;
 
   outFile->cd();
@@ -804,6 +935,36 @@ int main(int argc, char* argv[])
       leg->SetFillColor(kWhite);
       histSupVec.at(i)->Write();
     }
+
+  TCanvas* corrMPVmaxFitAllSenCan = new TCanvas("corrMPVmaxFitAllSenCan");
+  corrMPVmaxFit->Draw("AP");
+  leg = corrMPVmaxFitAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  corrMPVmaxFitAllSenCan->SetGridx();
+  corrMPVmaxFitAllSenCan->SetGridy();
+  corrMPVmaxFitAllSenCan->Modified();
+  corrMPVmaxFitAllSenCan->Update();
+  corrMPVmaxFitAllSenCan->Write();
+
+  TCanvas* corrWidthGsigFitAllSenCan = new TCanvas("corrWidthGsigFitAllSenCan");
+  corrWidthGsigFit->Draw("AP");
+  leg = corrWidthGsigFitAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  corrWidthGsigFitAllSenCan->SetGridx();
+  corrWidthGsigFitAllSenCan->SetGridy();
+  corrWidthGsigFitAllSenCan->Modified();
+  corrWidthGsigFitAllSenCan->Update();
+  corrWidthGsigFitAllSenCan->Write();
+
+  TCanvas* corrNoiseGrGsigFitAllSenCan = new TCanvas("corrNoiseGrGsigFitAllSenCan");
+  corrNoiseGrGsigFit->Draw("AP");
+  leg = corrNoiseGrGsigFitAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  corrNoiseGrGsigFitAllSenCan->SetGridx();
+  corrNoiseGrGsigFitAllSenCan->SetGridy();
+  corrNoiseGrGsigFitAllSenCan->Modified();
+  corrNoiseGrGsigFitAllSenCan->Update();
+  corrNoiseGrGsigFitAllSenCan->Write();
 
   outFile->Close();
 
