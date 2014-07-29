@@ -326,16 +326,16 @@ int main(int argc, char* argv[])
 
 	  func = chDistr->GetFunction("gausLang");
 
-	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
-	  mpvGr->SetPointError(iRun, 0, func->GetParError(3));
+	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(4));
+	  mpvGr->SetPointError(iRun, 0, func->GetParError(4));
 
 	  maxFitGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetMaximumX());
 
-	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
-	  lanWGr->SetPointError(iRun, 0, func->GetParError(2));
+	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
+	  lanWGr->SetPointError(iRun, 0, func->GetParError(3));
 
-	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(5));
-	  gSigGr->SetPointError(iRun, 0, func->GetParError(5));
+	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(6));
+	  gSigGr->SetPointError(iRun, 0, func->GetParError(6));
 
 	  noiseDistr = (TH1*) inFile->Get("fittedNoiseDistr");
 
@@ -569,6 +569,65 @@ int main(int argc, char* argv[])
       corrNoiseGrGsigFit->Add(corrGr);
     }
 
+  // normalization graph
+  TGraphErrors* normGraph = new TGraphErrors();
+  normGraph->SetName("normGraph");
+  normGraph->SetTitle("Normalization graph, using non irradiated sensors");
+  TF1* normFit = new TF1("normFit", "pol0", 150, 450); // function to fit the normalization constant
+  int point;
+  for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors, for correlations
+    if(fluences.at(i) == 0)
+      {
+	bia = mpvBiasVec.at(i)->GetX();
+	mpv = mpvBiasVec.at(i)->GetY();
+	errMpv = mpvBiasVec.at(i)->GetEY();
+
+	for(int iPoint = 0; iPoint < mpvBiasVec.at(i)->GetN(); ++iPoint)
+	  {
+	    point = normGraph->GetN();
+	    normGraph->SetPoint(point, bia[iPoint], mpv[iPoint]);
+	    normGraph->SetPointError(point, 0, errMpv[iPoint]);
+	  }
+      }
+  normGraph->Fit(normFit, "R");
+
+  // normalized mpv graph
+  TMultiGraph* normMpvGraph = new TMultiGraph("normMpvGraph", "MPV normalizet to non irradiated devices between 200 and 400 V");
+  std::vector<TGraphErrors*> normMpvGrVec;
+  TGraphErrors* normMpvGr;
+  double norm = normFit->GetParameter(0);
+  double normErr = normFit->GetParError(0);
+  double normMpv;
+  double normMpvErr;
+  for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors, for correlations
+    {
+      sprintf(name, "normMpvGr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      normMpvGr = new TGraphErrors();
+      normMpvGr->SetName(name);
+      normMpvGr->SetTitle(title);
+      normMpvGr->SetMarkerStyle(mpvBiasVec.at(i)->GetMarkerStyle());
+      normMpvGr->SetFillColor(kWhite);
+      normMpvGr->SetLineColor(mpvBiasVec.at(i)->GetLineColor()); // set line color and style
+      normMpvGr->SetMarkerColor(mpvBiasVec.at(i)->GetMarkerColor());
+      normMpvGr->SetLineStyle(mpvBiasVec.at(i)->GetLineStyle());
+
+      bia = mpvBiasVec.at(i)->GetX();
+      mpv = mpvBiasVec.at(i)->GetY();
+      errMpv = mpvBiasVec.at(i)->GetEY();
+
+      for(int iPoint = 0; iPoint < mpvBiasVec.at(i)->GetN(); ++iPoint)
+	{
+	  normMpv = mpv[iPoint] / norm;
+	  normMpvErr = sqrt(pow(errMpv[iPoint] / mpv[iPoint], 2) + pow(normErr / norm, 2)) * normMpv;
+	  normMpvGr->SetPoint(iPoint, bia[iPoint], normMpv);
+	  normMpvGr->SetPointError(iPoint, 0, normMpvErr);
+	}
+
+      normMpvGrVec.push_back(normMpvGr);
+      normMpvGraph->Add(normMpvGr);
+    }
+
   TMultiGraph* mpvAllSensors = new TMultiGraph();
   mpvAllSensors->SetName("mpvAllSensors");
   mpvAllSensors->SetTitle("MPV vs bias");
@@ -772,11 +831,19 @@ int main(int argc, char* argv[])
   corrNoiseGrGsigFit->GetXaxis()->SetTitle("G sigma fit function [ADC]");
   corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (RMS) [ADC]");
 
+  normGraph->Draw("AP");
+  normGraph->GetXaxis()->SetTitle("Bias [V]");
+  normGraph->GetYaxis()->SetTitle("MPV [ADC]");
+
+  normMpvGraph->Draw("AP");
+  normMpvGraph->GetXaxis()->SetTitle("Bias [V]");
+  normMpvGraph->GetYaxis()->SetTitle("CCE");
+
   delete servCan;
 
   outFile->cd();
-  for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
-    mpvBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
+  //   mpvBiasVec.at(i)->Write();
   mpvAllSensors->Write();
 
   TCanvas* mpvAllSenCan = new TCanvas("mpvAllSenCan");
@@ -789,8 +856,8 @@ int main(int argc, char* argv[])
   mpvAllSenCan->Update();
   mpvAllSenCan->Write();
 
-  for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
-    maxFitBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
+  //   maxFitBiasVec.at(i)->Write();
   maxFitAllSensors->Write();
 
   TCanvas* maxFitAllSenCan = new TCanvas("maxFitAllSenCan");
@@ -803,8 +870,8 @@ int main(int argc, char* argv[])
   maxFitAllSenCan->Update();
   maxFitAllSenCan->Write();
 
-  for(unsigned int i = 0; i < lanWBiasVec.size(); ++i) // loop on the graphs
-    lanWBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < lanWBiasVec.size(); ++i) // loop on the graphs
+  //   lanWBiasVec.at(i)->Write();
   lanWAllSensors->Write();
 
   TCanvas* lanWAllSenCan = new TCanvas("lanWAllSenCan");
@@ -817,8 +884,8 @@ int main(int argc, char* argv[])
   lanWAllSenCan->Update();
   lanWAllSenCan->Write();
 
-  for(unsigned int i = 0; i < gSigBiasVec.size(); ++i) // loop on the graphs
-    gSigBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < gSigBiasVec.size(); ++i) // loop on the graphs
+  //   gSigBiasVec.at(i)->Write();
   gSigAllSensors->Write();
 
   TCanvas* gSigAllSenCan = new TCanvas("gSigAllSenCan");
@@ -831,8 +898,8 @@ int main(int argc, char* argv[])
   gSigAllSenCan->Update();
   gSigAllSenCan->Write();
 
-  for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
-    noiseBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
+  //   noiseBiasVec.at(i)->Write();
   noiseAllSensors->Write();
 
   TCanvas* noiseAllSenCan = new TCanvas("noiseAllSenCan");
@@ -845,8 +912,8 @@ int main(int argc, char* argv[])
   noiseAllSenCan->Update();
   noiseAllSenCan->Write();
 
-  for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
-    noiseGroupBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
+  //   noiseGroupBiasVec.at(i)->Write();
   noiseGroupAllSensors->Write();
 
   TCanvas* noiseGroupAllSenCan = new TCanvas("noiseGroupAllSenCan");
@@ -859,8 +926,8 @@ int main(int argc, char* argv[])
   noiseGroupAllSenCan->Update();
   noiseGroupAllSenCan->Write();
 
-  for(unsigned int i = 0; i < noisePairBiasVec.size(); ++i) // loop on the graphs
-    noisePairBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < noisePairBiasVec.size(); ++i) // loop on the graphs
+  //   noisePairBiasVec.at(i)->Write();
   noisePairAllSensors->Write();
 
   TCanvas* noisePairAllSenCan = new TCanvas("noisePairAllSenCan");
@@ -873,8 +940,8 @@ int main(int argc, char* argv[])
   noisePairAllSenCan->Update();
   noisePairAllSenCan->Write();
 
-  for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
-    snrBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
+  //   snrBiasVec.at(i)->Write();
   snrAllSensors->Write();
 
   TCanvas* snrAllSenCan = new TCanvas("snrAllSenCan");
@@ -887,8 +954,8 @@ int main(int argc, char* argv[])
   snrAllSenCan->Update();
   snrAllSenCan->Write();
 
-  for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
-    eff95BiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
+  //   eff95BiasVec.at(i)->Write();
   eff95AllSensors->Write();
 
   TCanvas* eff95AllSenCan = new TCanvas("eff95AllSenCan");
@@ -901,8 +968,8 @@ int main(int argc, char* argv[])
   eff95AllSenCan->Update();
   eff95AllSenCan->Write();
 
-  for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
-    resYBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
+  //   resYBiasVec.at(i)->Write();
   resYAllSensors->Write();
 
   TCanvas* resYAllSenCan = new TCanvas("resYAllSenCan");
@@ -915,8 +982,8 @@ int main(int argc, char* argv[])
   resYAllSenCan->Update();
   resYAllSenCan->Write();
 
-  for(unsigned int i = 0; i < chipTempBiasVec.size(); ++i) // loop on the graphs
-    chipTempBiasVec.at(i)->Write();
+  // for(unsigned int i = 0; i < chipTempBiasVec.size(); ++i) // loop on the graphs
+  //   chipTempBiasVec.at(i)->Write();
   chipTempAllSensors->Write();
 
   TCanvas* chipTempAllSenCan = new TCanvas("chipTempAllSenCan");
@@ -965,6 +1032,19 @@ int main(int argc, char* argv[])
   corrNoiseGrGsigFitAllSenCan->Modified();
   corrNoiseGrGsigFitAllSenCan->Update();
   corrNoiseGrGsigFitAllSenCan->Write();
+
+  normGraph->Write();
+  normMpvGraph->Write();
+
+  TCanvas* normMpvGraphCan = new TCanvas("normMpvGraphCan");
+  normMpvGraph->Draw("APL");
+  leg = normMpvGraphCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  normMpvGraphCan->SetGridx();
+  normMpvGraphCan->SetGridy();
+  normMpvGraphCan->Modified();
+  normMpvGraphCan->Update();
+  normMpvGraphCan->Write();
 
   outFile->Close();
 

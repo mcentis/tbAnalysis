@@ -189,6 +189,7 @@ Double_t gausLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau g
   return langauPart + gausPart;
 }
 
+// the sigma of the convolution and the one of the noise are constrained to be the same
 TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
 {
   TF1* gausFunc = new TF1("gausFunc", "gaus", -30, 5); // referred as g0 in the next comments
@@ -237,6 +238,7 @@ TF1* gausLanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit)
   return gausLang;
 }
 
+// the sigma of the convolution and the one of the noise are constrained to be the same, mean and sigma of the noise are fixed
 TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, double mean, double sigma) // gauss parameters (mean and sigma) from another histo
 {
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
@@ -279,6 +281,65 @@ TF1* gausLanGausFitFixGaus(TH1* inHist, double negSigmaFit, double posSigmaFit, 
   gausLang->SetNpx(1e4);
   gausLang->SetParameters(par);
   gausLang->SetParNames("ConstG0", "MeanG0", "Width", "MPV", "Area", "GSigma");
+  for(int i = 0; i < nPars; ++i)
+    gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
+
+  inHist->Fit(gausLang, "RL");
+
+  return gausLang;
+}
+
+Double_t gausNoiseLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a landau gaussian convolution
+{
+  Double_t gausPart = par[0] * TMath::Gaus(*x, par[1], par[2]);
+  Double_t langauPart = langaufun(x, &par[3]); // par 0 to 2 belong to the gauss part
+
+  return langauPart + gausPart;
+}
+
+// just fix the gaus parameters of the gaussian close to 0, the rest is free
+TF1* gausLanGausFitFixGausNoise(TH1* inHist, double negSigmaFit, double posSigmaFit, double mean, double sigma) // gauss parameters (mean and sigma) from another histo
+{
+  TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
+
+  const int nPars = 7;
+  double par[nPars] = {0};
+
+  // set the gaus fit parameters
+  par[0] = inHist->GetBinContent(inHist->FindBin(0)); // constant gets the value of the bin at 0
+  par[1] = mean; // these 2 remain fixed
+  par[2] = sigma;
+  for(int i = 3; i < nPars; ++i) par[i] = langauFunc->GetParameter(i - 3); // get parameters form langaus fit, except gaus sigma
+
+  double parLimHi[nPars] = {0};
+  double parLimLo[nPars] = {0};
+
+  parLimLo[0] = -5; // g0 const
+  parLimHi[0] = 1000000;
+  parLimLo[1] = mean; // g0 mean
+  parLimHi[1] = mean;
+  parLimLo[2] = sigma; // g0 sigma
+  parLimHi[2] = sigma;
+
+  for(int i = 3; i < nPars; ++i) // allow a 50% variation on the already fitted parameters, fix gaus sigma
+    {
+      parLimLo[i] = par[i] - 0.5 * fabs(par[i]);
+      parLimHi[i] = par[i] + 0.5 * fabs(par[i]);
+    }
+
+  const char* parNames[nPars] = {"ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma"};
+  std::cout << "Start parameters and limits\n";
+  for(int i = 0; i < nPars; ++i)
+    std::cout << parNames[i] << "\t\t" << par[i] << "    " << parLimLo[i] << "   " << parLimHi[i] << " \n";
+  std::cout << std::endl;
+
+  double fitR1 = inHist->GetXaxis()->GetXmin();
+  double fitR2 = inHist->GetXaxis()->GetXmax();
+
+  TF1* gausLang = new TF1("gausLang", gausNoiseLangaufun, fitR1, fitR2, nPars);
+  gausLang->SetNpx(1e4);
+  gausLang->SetParameters(par);
+  gausLang->SetParNames("ConstG0", "MeanG0", "SigmaG0", "Width", "MPV", "Area", "GSigma");
   for(int i = 0; i < nPars; ++i)
     gausLang->SetParLimits(i, parLimLo[i], parLimHi[i]);
 
