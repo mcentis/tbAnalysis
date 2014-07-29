@@ -758,13 +758,13 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   fitResiduals(residualsX, -0.5, 0.5);
   fitResiduals(residualsY, -0.25, 0.25);
 
-  gausLanGausFitFixGaus(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
+  gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
              		noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   // lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
-  lanGausFit(signalDistrTimeDistHPHcut, negSigmaFit, posSigmaFit);
+  lanGausFit(signalDistrTimeDistHPHcut, 10, 10); // fixed range !!!!!!
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   //gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
