@@ -313,6 +313,7 @@ int main(int argc, char* argv[])
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
+TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
 
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 562, -50.5, 511.5);
@@ -389,6 +390,9 @@ int main(int argc, char* argv[])
   bool goodNoise[nChannels]; // determine wether a channel was hit or not, for the noise analysis
   double noiseSum; // used for the noise over multiple channels
   int summed; // number of summed ch for the noise
+
+  std::vector<double> hitSignal; // vectors to store the hit and strip hph signal to be used for a cut using strip hph
+  std::vector<double> stripHPHsignal;
 
   int highestPHstrip = -1; // strip with the highest ph in the hit
   double phHighestStrip = 0; // charge on the strip with the highest charge
@@ -603,6 +607,9 @@ int main(int argc, char* argv[])
 		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
 		      correlationPHstripHPHhit->Fill(highestCharge * polarity, phHighestStrip);
 
+		      hitSignal.push_back(highestCharge * polarity);
+		      stripHPHsignal.push_back(phHighestStrip);
+
 		      // eta distribution
 		      if(evtAliPH[highestPHstrip + 1] * polarity > evtAliPH[highestPHstrip - 1] * polarity)
 			{
@@ -689,6 +696,11 @@ int main(int argc, char* argv[])
       delete trk;
     } // loop on the tracks (entries in the tree)
 
+  double threshold = backgroundDistrHPH->GetMean() + backgroundDistrHPH->GetRMS();
+  for(unsigned int i = 0; i < hitSignal.size(); ++i) // implementation of the cut using the strip with highest ph
+    if(stripHPHsignal.at(i) > threshold)
+      signalDistrTimeDistHPHcut->Fill(hitSignal.at(i));
+
   TProfile* positivizedSignalTimeProfile = positivizedSignalTime->ProfileX("positivizedSignalTimeProfile");
   positivizedSignalTimeProfile->SetTitle("Positivized signal time profile");
 
@@ -752,6 +764,7 @@ int main(int argc, char* argv[])
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
   // lanGausFit(stripHPHDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
+  lanGausFit(signalDistrTimeDistHPHcut, negSigmaFit, posSigmaFit);
   lanGausFit(stripHPH_plusNeigh_DistrTimeCutDistCut, negSigmaFit, posSigmaFit);
 
   gausLanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit); // peack at 0 and landau gauss convolution fitted simultaneously
@@ -1020,6 +1033,7 @@ int main(int argc, char* argv[])
   noiseDistrPair->Write();
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
+  signalDistrTimeDistHPHcut->Write();
   noiseDistrTimeCut->Write();
   backgroundDistrHPH->Write();
   stripHPHDistrTimeCut->Write();
