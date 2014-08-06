@@ -69,6 +69,19 @@ int main(int argc, char* argv[])
     std::cout << sensorType.at(i) << '\t' << fluences.at(i) << '\t' << runList.at(i) << std::endl;
   std::cout << "If too many sensors appear, have a look for empty lines in the lists" << std::endl;
 
+  std::vector<std::string> sensorLabel; // labels for captions
+  for(unsigned int i = 0; i < sensorType.size(); ++i)
+    {
+      if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
+	sensorLabel.push_back("p-bulk, p-stop");
+      else if(sensorType.at(i)[6] == 'Y' || sensorType.at(i)[6] == 'y')
+	sensorLabel.push_back("p-bulk, p-spray");
+      else if(sensorType.at(i)[6] == 'N' || sensorType.at(i)[6] == 'n')
+	sensorLabel.push_back("n-bulk         ");
+      else
+	sensorLabel.push_back("   no label    ");
+    }
+
   std::vector<TGraphErrors*> maxFitBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec;
   std::vector<TGraphErrors*> lanWBiasVec;
@@ -189,7 +202,7 @@ int main(int argc, char* argv[])
       linStyle = 9;
 
       sprintf(name, "mpv_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       mpvGr = new TGraphErrors();
       mpvGr->SetName(name);
       mpvGr->SetTitle(title);
@@ -200,7 +213,7 @@ int main(int argc, char* argv[])
       mpvGr->SetLineStyle(linStyle);
 
       sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       maxFitGr = new TGraphErrors();
       maxFitGr->SetName(name);
       maxFitGr->SetTitle(title);
@@ -211,7 +224,7 @@ int main(int argc, char* argv[])
       maxFitGr->SetLineStyle(linStyle);
 
       sprintf(name, "lanW_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       lanWGr = new TGraphErrors();
       lanWGr->SetName(name);
       lanWGr->SetTitle(title);
@@ -222,7 +235,7 @@ int main(int argc, char* argv[])
       lanWGr->SetLineStyle(linStyle);
 
       sprintf(name, "gSig_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       gSigGr = new TGraphErrors();
       gSigGr->SetName(name);
       gSigGr->SetTitle(title);
@@ -233,7 +246,7 @@ int main(int argc, char* argv[])
       gSigGr->SetLineStyle(linStyle);
 
       sprintf(name, "noise_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       noiseGr = new TGraphErrors();
       noiseGr->SetName(name);
       noiseGr->SetTitle(title);
@@ -244,7 +257,7 @@ int main(int argc, char* argv[])
       noiseGr->SetLineStyle(linStyle);
 
       sprintf(name, "noiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       noiseGroupGr = new TGraphErrors();
       noiseGroupGr->SetName(name);
       noiseGroupGr->SetTitle(title);
@@ -255,7 +268,7 @@ int main(int argc, char* argv[])
       noiseGroupGr->SetLineStyle(linStyle);
 
       sprintf(name, "noisePair_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       noisePairGr = new TGraphErrors();
       noisePairGr->SetName(name);
       noisePairGr->SetTitle(title);
@@ -266,7 +279,7 @@ int main(int argc, char* argv[])
       noisePairGr->SetLineStyle(linStyle);
 
       sprintf(name, "eff95_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       eff95Gr = new TGraphErrors();
       eff95Gr->SetName(name);
       eff95Gr->SetTitle(title);
@@ -277,7 +290,7 @@ int main(int argc, char* argv[])
       eff95Gr->SetLineStyle(linStyle);
 
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
       resYGr->SetName(name);
       resYGr->SetTitle(title);
@@ -288,7 +301,7 @@ int main(int argc, char* argv[])
       resYGr->SetLineStyle(linStyle);
 
       sprintf(name, "chipTemp_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       chipTempGr = new TGraphErrors();
       chipTempGr->SetName(name);
       chipTempGr->SetTitle(title);
@@ -299,7 +312,7 @@ int main(int argc, char* argv[])
       chipTempGr->SetLineStyle(linStyle);
 
       sprintf(name, "histSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "Distributions at different biases %s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "Distributions at different biases %s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       histSupCan = new TCanvas(name, title);
       histSupCan->SetGridx();
       histSupCan->SetGridy();
@@ -422,7 +435,7 @@ int main(int argc, char* argv[])
       //noiseGr = noisePairBiasVec.at(i); // noise on a pair of strips
 
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       snrGr = new TGraphErrors();
       snrGr->SetName(name);
       snrGr->SetTitle(title);
@@ -483,7 +496,7 @@ int main(int argc, char* argv[])
       gr2 = maxFitBiasVec.at(i);
 
       sprintf(name, "corrMPVmaxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -513,7 +526,7 @@ int main(int argc, char* argv[])
       gr2 = gSigBiasVec.at(i);
 
       sprintf(name, "corrLanWgausSigFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -543,7 +556,7 @@ int main(int argc, char* argv[])
       gr2 = noiseGroupBiasVec.at(i);
 
       sprintf(name, "corrgSigNoiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -602,7 +615,7 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors, for correlations
     {
       sprintf(name, "normMpvGr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %.01e n_{eq} cm^{-2}", sensorLabel.at(i).c_str(), fluences.at(i));
       normMpvGr = new TGraphErrors();
       normMpvGr->SetName(name);
       normMpvGr->SetTitle(title);
