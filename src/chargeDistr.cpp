@@ -269,29 +269,29 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
   TH1D* tempDistr = new TH1D("tempDistr", "Temperature of the beetle chip;Temperature [C];Events", 600, 0, 30);
 
-  // three histos to get a map of charge collection over 2 strips in the time cut
+  // three histos to get a map of charge collection over 2 strips in the time cut, distance cut
   double minX = -20000;
   double maxX = 20000;
   int binX = 100;
   double minY = -0.5;
   double maxY = 160.5;
   int binY = 31;
-  TH2D* chargeMapMod160Normalized = new TH2D("chargeMapMod160Normalized", "Charge map in the time cut divided by the number of tracks;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-  TH2D* chargeMapMod160 = new TH2D("chargeMapMod160", "Charge map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-  TH2D* hitMapMod160 = new TH2D("hitMapMod160", "Hit map in the time cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* chargeMapMod160Normalized = new TH2D("chargeMapMod160Normalized", "Charge map in the time cut, distance cut, divided by the number of tracks;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* chargeMapMod160 = new TH2D("chargeMapMod160", "Charge map in the time cut, distance cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* hitMapMod160 = new TH2D("hitMapMod160", "Hit map in the time cut, distance cut;x [#mum];y mod 160 [#mum];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
-  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
-
-  // charge collection map over the sensor in the time cut
+  // charge collection map over the sensor in the time cut, distance cut
   minX = -20;
   maxX = 20;
   binX = 200;
   minY = -10;
   maxY = 10;
   binY = 100;
-  TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut divided by the number of tracks;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-  TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
-  TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* chargeMapNormalized = new TH2D("chargeMapNormalized", "Charge map in the time cut, distance cut, divided by the number of tracks;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+  TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
+
+  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
   TH1D* noiseHistCh[nChannels]; // calculation of the noise
   for(int i = 0; i < nChannels; ++i)
@@ -558,6 +558,25 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      etaDistrTimeCutDistCut->Fill(phR / (phR + phL));
 
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
+
+		  // hitmap and charge map mod 160 (on 2 strips)
+		  posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
+		  posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		  //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUTpix[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
+		  iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
+		  oldContent = chargeMapMod160->GetBinContent(iBin);
+		  chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		       
+		  hitMapMod160->Fill(posX, posY);
+		  std::cout << hitMapMod160->GetEntries() << std::endl;
+		  //hitmap and charge map over the sensor
+		  posX = trkVec.at(trackPos).extraPosDUT[0];
+		  posY = trkVec.at(trackPos).extraPosDUT[1];
+		  iBin = chargeMap->FindBin(posX, posY); // find the bin
+		  oldContent = chargeMap->GetBinContent(iBin);
+		  chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		  
+		  hitMap->Fill(posX, posY);
 		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
@@ -582,26 +601,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      {
 			phAroundHPHstripTimeCut->Fill(iCh - highestPHstrip, evtAliPH[iCh] * polarity);
 			phAroundExtraStripTimeCut->Fill(iCh - hiChargeCh, evtAliPH[iCh] * polarity);
-		      }
-
-		  // hitmap and charge map mod 160 (on 2 strips)
-		  posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
-		  posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
-		  iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
-		  oldContent = chargeMapMod160->GetBinContent(iBin);
-		  chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
-		       
-		  hitMapMod160->Fill(posX, posY);
-		       
-		  //hitmap and charge map over the sensor
-		  posX = trkVec.at(trackPos).extraPosDUT[0];
-		  posY = trkVec.at(trackPos).extraPosDUT[1];
-		  iBin = chargeMap->FindBin(posX, posY); // find the bin
-		  oldContent = chargeMap->GetBinContent(iBin);
-		  chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
-		       
-		  hitMap->Fill(posX, posY);
-		       
+		      }		 
 		}
 	      tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	      tempDistr->Fill(evtAliTemp);
