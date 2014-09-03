@@ -292,7 +292,10 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 10, -0, 1, 151, -50.5, 511.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 8, -0, 1, 151, -50.5, 511.5);
+  TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
+  mpvStrip->SetName("mpvStrip");
+  mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
 
   TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
@@ -745,6 +748,31 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       slice->Write();
     }
 
+  TDirectory* posSlicesDir = outFile->mkdir("positionSlices");
+  posSlicesDir->cd();   
+
+  nBins = signalStrip->GetXaxis()->GetNbins();
+  double pos;
+  for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions in various strip positions
+    {
+      pos = signalStrip->GetXaxis()->GetBinCenter(iBin);
+      binW = signalStrip->GetXaxis()->GetBinWidth(iBin);
+
+      sprintf(name, "posSlice_%f", pos);
+      sprintf(title, "Hit charge distribution (positivized) at position %f;Hit charge [ADC];Entries", pos);
+
+      slice = signalStrip->ProjectionY(name, iBin, iBin);
+      slice->SetTitle(title);
+
+      fit = gausLanGausFitFixGausNoise(slice, negSigmaFit, posSigmaFit,
+				       noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+
+      mpvStrip->SetPoint(mpvStrip->GetN(), pos, fit->GetParameter(4));
+      mpvStrip->SetPointError(mpvStrip->GetN() - 1, binW / 2, fit->GetParError(4));
+
+      slice->Write();
+    }
+
   TGraphErrors* noiseMeanCh = new TGraphErrors();
   noiseMeanCh->SetName("noiseMeanCh");
   noiseMeanCh->SetTitle("Mean of the noise fit vs channel");
@@ -924,6 +952,10 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   noiseChiCh->GetXaxis()->SetTitle("Channel number");
   noiseChiCh->GetYaxis()->SetTitle("#chi^{2} / ndf [ADC]");
 
+  mpvStrip->Draw("AP");
+  mpvStrip->GetXaxis()->SetTitle("Position [AU]");
+  mpvStrip->GetYaxis()->SetTitle("Landau MPV [ADC]");
+
   delete servCan;
 
   outFile->cd();
@@ -1006,6 +1038,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
   signalStrip->Write();
+  mpvStrip->Write();
   etaDistrTimeCutDistCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
