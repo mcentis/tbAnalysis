@@ -291,6 +291,9 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   TH2D* chargeMap = new TH2D("chargeMap", "Charge map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
+  // 2d histo to study signal in different parts of the strip
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 10, -0, 1, 151, -50.5, 511.5);
+
   TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
   TH1D* noiseHistCh[nChannels]; // calculation of the noise
@@ -320,6 +323,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   double posX = 0; // store positions
   double posY = 0; // this one will be the mod of the position
   double oldContent = 0;
+
+  double* intPart = new double(0); // used in the signalStrip histo
 
   bool goodNoise[nChannels]; // determine wether a channel was hit or not, for the noise analysis
   double noiseSum; // used for the noise over multiple channels
@@ -559,24 +564,26 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 
-		  // hitmap and charge map mod 160 (on 2 strips)
-		  posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
-		  posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
-		  //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUTpix[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
-		  iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
-		  oldContent = chargeMapMod160->GetBinContent(iBin);
-		  chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
-		       
-		  hitMapMod160->Fill(posX, posY);
-		  std::cout << hitMapMod160->GetEntries() << std::endl;
-		  //hitmap and charge map over the sensor
-		  posX = trkVec.at(trackPos).extraPosDUT[0];
-		  posY = trkVec.at(trackPos).extraPosDUT[1];
-		  iBin = chargeMap->FindBin(posX, posY); // find the bin
-		  oldContent = chargeMap->GetBinContent(iBin);
-		  chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
-		  
-		  hitMap->Fill(posX, posY);
+		      // hitmap and charge map mod 160 (on 2 strips)
+		      posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
+		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		      //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUTpix[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
+		      iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
+		      oldContent = chargeMapMod160->GetBinContent(iBin);
+		      chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		      
+		      hitMapMod160->Fill(posX, posY);
+		      //std::cout << hitMapMod160->GetEntries() << std::endl;
+		      //hitmap and charge map over the sensor
+		      posX = trkVec.at(trackPos).extraPosDUT[0];
+		      posY = trkVec.at(trackPos).extraPosDUT[1];
+		      iBin = chargeMap->FindBin(posX, posY); // find the bin
+		      oldContent = chargeMap->GetBinContent(iBin);
+		      chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
+		      
+		      hitMap->Fill(posX, posY);
+
+		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUTpix[1], intPart), highestCharge * polarity);
 		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
@@ -998,6 +1005,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   chargeMapNormalized->Write();
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
+  signalStrip->Write();
   etaDistrTimeCutDistCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
