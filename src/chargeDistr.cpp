@@ -85,8 +85,19 @@ int main(int argc, char* argv[])
   char name[50]; // to be used in varios occasions
   char title[200];
 
-  TDirectory* dir = (TDirectory*) inFile->Get("WriteTracksToNTuple");
+  TDirectory* dir = (TDirectory*) inFile->Get("Ntuple");
+  if(!dir)
+    {
+      std::cout << "TDirectory not found" << std::endl;
+      return -1;
+    }
+
   TTree* trkTree = (TTree*) dir->Get("EUFit");
+  if(!dir)
+    {
+      std::cout << "TTree not found" << std::endl;
+      return -1;
+    }
 
   ConfigFileReader* conf = new ConfigFileReader(argv[2]);
   //conf->DumpConfMap();
@@ -147,14 +158,17 @@ int main(int argc, char* argv[])
   Double_t        measQ[nPlanes];
   Double_t        fitX[nPlanes];
   Double_t        fitY[nPlanes];
-  Double_t        dutTrackX;
-  Double_t        dutTrackY;
+
+  Double_t        dutTrackX_global; // extrapolation of the track on the DUT, global ref frame
+  Double_t        dutTrackY_global;
+  Double_t        dutTrackX_local;  // extrapolation of the track on the DUT, local ref frame
+  Double_t        dutTrackY_local;
+  Double_t        dutHitX_global; // measured DUT hit in global ref frame
+  Double_t        dutHitY_global;
   Double_t        dutPixelX;
   Double_t        dutPixelY;
-  Double_t        dutHitX;
-  Double_t        dutHitY;
-  Double_t        dutHitR;
-  Double_t        dutHitQ;
+  Double_t        dutHitR; // distance between extrapolated and measured hit on DUT in global ref frame, mm
+  Double_t        dutHitQ; // charge of the cluster hit on DUT, units of ADC * 100
   Float_t         alibava_TDC;
   Float_t         alibava_temp;
   Double_t        alibavaPH[nChannels];
@@ -176,12 +190,14 @@ int main(int argc, char* argv[])
       trkTree->SetBranchAddress(TString::Format("fitY_%i", i), &fitY[i]);
     }
 
-  trkTree->SetBranchAddress("dutTrackX",&dutTrackX); // position extrapolated from the track fit on the DUT, global ref frame
-  trkTree->SetBranchAddress("dutTrackY",&dutTrackY);
+  trkTree->SetBranchAddress("dutTrackX_global",&dutTrackX_global); // position extrapolated from the track fit on the DUT, global ref frame
+  trkTree->SetBranchAddress("dutTrackY_global",&dutTrackY_global);
+  trkTree->SetBranchAddress("dutTrackX_local",&dutTrackX_local); // position extrapolated from the track fit on the DUT, local ref frame
+  trkTree->SetBranchAddress("dutTrackY_local",&dutTrackY_local);
   trkTree->SetBranchAddress("dutPixelX",&dutPixelX); // position extrapolated on the DUT, dut ref frame, in pixel / strip number
   trkTree->SetBranchAddress("dutPixelY",&dutPixelY);
-  trkTree->SetBranchAddress("dutHitX",&dutHitX); // cluster matched on the alibava
-  trkTree->SetBranchAddress("dutHitY",&dutHitY);
+  trkTree->SetBranchAddress("dutHitX_global",&dutHitX_global); // cluster matched on the alibava
+  trkTree->SetBranchAddress("dutHitY_global",&dutHitY_global);
   trkTree->SetBranchAddress("dutHitR",&dutHitR);
   trkTree->SetBranchAddress("dutHitQ",&dutHitQ);
   trkTree->SetBranchAddress("alibava_tdc",&alibava_TDC);
@@ -197,12 +213,12 @@ int main(int argc, char* argv[])
   trkTree->SetBranchStatus("*", 0);
   trkTree->SetBranchStatus("EvtNr", 1);
   trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
-  trkTree->SetBranchStatus("dutTrackX", 1);
-  trkTree->SetBranchStatus("dutTrackY", 1);
+  trkTree->SetBranchStatus("dutTrackX_global", 1);
+  trkTree->SetBranchStatus("dutTrackY_global", 1);
   trkTree->SetBranchStatus("dutPixelX", 1);
   trkTree->SetBranchStatus("dutPixelY", 1);
-  trkTree->SetBranchStatus("dutHitX", 1);
-  trkTree->SetBranchStatus("dutHitY", 1);
+  trkTree->SetBranchStatus("dutHitX_global", 1);
+  trkTree->SetBranchStatus("dutHitY_global", 1);
 
   // tracks
   TH1I* trkEvt = new TH1I("traksEvt", "Number of tracks per event;Number of tracks;Entries", 21, -0.5, 20.5);
@@ -357,15 +373,17 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
       // put the track info into a structure
       trk = new track();
-      trk->extraPosDUT[0] = dutTrackX; // global reference frame
-      trk->extraPosDUT[1] = dutTrackY;
+      trk->extraPosDUT_global[0] = dutTrackX_global; // global reference frame
+      trk->extraPosDUT_global[1] = dutTrackY_global;
+      trk->extraPosDUT_local[0] = dutTrackX_local; // local reference frame
+      trk->extraPosDUT_local[1] = dutTrackY_local;
       trk->extraPosDUTpix[0] = dutPixelX; // dut ref frame, in pixel / strip number
       trk->extraPosDUTpix[1] = dutPixelY;
-      trk->measPosDUT[0] = dutHitX;
-      trk->measPosDUT[1] = dutHitY;
+      trk->measPosDUT_global[0] = dutHitX_global;
+      trk->measPosDUT_global[1] = dutHitY_global;
       trk->entryNum = i; 
 
-      hitMapDUTtele->Fill(dutTrackX, dutTrackY);
+      hitMapDUTtele->Fill(dutTrackX_global, dutTrackY_global);
       extraChDistr->Fill(dutPixelY);
 
       if(evtMrk == EvtNr)
@@ -385,18 +403,18 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk)
 		{
-		  if(trkVec.at(iTrk).measPosDUT[0] > -900 && trkVec.at(iTrk).measPosDUT[1] > -900) // if there is a matched hit
+		  if(trkVec.at(iTrk).measPosDUT_global[0] > -900 && trkVec.at(iTrk).measPosDUT_global[1] > -900) // if there is a matched hit
 		    {
-		      residualsYvsEntry->Fill(trkVec.at(iTrk).entryNum, trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
-		      hitMapMatched->Fill(trkVec.at(iTrk).measPosDUT[0], trkVec.at(iTrk).measPosDUT[1]);
-		      residualsX->Fill(trkVec.at(iTrk).measPosDUT[0] - trkVec.at(iTrk).extraPosDUT[0]);
-		      residualsY->Fill(trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
-		      residuals->Fill(trkVec.at(iTrk).measPosDUT[0] - trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
-		      residualsXvsX->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).measPosDUT[0] - trkVec.at(iTrk).extraPosDUT[0]);
-		      residualsYvsY->Fill(trkVec.at(iTrk).extraPosDUT[1], trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
-		      residualsXvsY->Fill(trkVec.at(iTrk).extraPosDUT[1], trkVec.at(iTrk).measPosDUT[0] - trkVec.at(iTrk).extraPosDUT[0]);
-		      residualsYvsX->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
-		      residualsYvsEvt->Fill(evtMrk, trkVec.at(iTrk).measPosDUT[1] - trkVec.at(iTrk).extraPosDUT[1]);
+		      residualsYvsEntry->Fill(trkVec.at(iTrk).entryNum, trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+		      hitMapMatched->Fill(trkVec.at(iTrk).measPosDUT_global[0], trkVec.at(iTrk).measPosDUT_global[1]);
+		      residualsX->Fill(trkVec.at(iTrk).measPosDUT_global[0] - trkVec.at(iTrk).extraPosDUT_global[0]);
+		      residualsY->Fill(trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+		      residuals->Fill(trkVec.at(iTrk).measPosDUT_global[0] - trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+		      residualsXvsX->Fill(trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).measPosDUT_global[0] - trkVec.at(iTrk).extraPosDUT_global[0]);
+		      residualsYvsY->Fill(trkVec.at(iTrk).extraPosDUT_global[1], trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+		      residualsXvsY->Fill(trkVec.at(iTrk).extraPosDUT_global[1], trkVec.at(iTrk).measPosDUT_global[0] - trkVec.at(iTrk).extraPosDUT_global[0]);
+		      residualsYvsX->Fill(trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+		      residualsYvsEvt->Fill(evtMrk, trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
 		    }
 
 		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
@@ -469,7 +487,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	    {
 	      extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
 
-	      if(trkVec.at(iTrk).extraPosDUT[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT[0] >= xCut2) // geom cut in X
+	      if(trkVec.at(iTrk).extraPosDUT_global[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT_global[0] >= xCut2) // geom cut in X
 		analyzeEvent = false;
 
 	      for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // the track must be on the strips considered for the analysis
@@ -493,7 +511,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	      	{
 		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
 
-		  hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT[0], trkVec.at(iTrk).extraPosDUT[1]);
+		  hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).extraPosDUT_global[1]);
 		  extraChDistrGoodCh->Fill(extraCh);
 
 		  hitCharge = 0;
@@ -568,8 +586,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 
 		      // hitmap and charge map mod 160 (on 2 strips)
-		      posX = 1000 * trkVec.at(trackPos).extraPosDUT[0]; // assign the positions in x and y
-		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT[1]) % (int)(2 * pitch * 1000));
+		      posX = 1000 * trkVec.at(trackPos).extraPosDUT_global[0]; // assign the positions in x and y
+		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT_global[1]) % (int)(2 * pitch * 1000));
 		      //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUTpix[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
 		      iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
 		      oldContent = chargeMapMod160->GetBinContent(iBin);
@@ -578,8 +596,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      hitMapMod160->Fill(posX, posY);
 		      //std::cout << hitMapMod160->GetEntries() << std::endl;
 		      //hitmap and charge map over the sensor
-		      posX = trkVec.at(trackPos).extraPosDUT[0];
-		      posY = trkVec.at(trackPos).extraPosDUT[1];
+		      posX = trkVec.at(trackPos).extraPosDUT_global[0];
+		      posY = trkVec.at(trackPos).extraPosDUT_global[1];
 		      iBin = chargeMap->FindBin(posX, posY); // find the bin
 		      oldContent = chargeMap->GetBinContent(iBin);
 		      chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
@@ -600,7 +618,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 		  if(highestCharge * polarity < 15) // investigation of the events with low ph
 		    {
-		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT[0], trkVec.at(trackPos).extraPosDUT[1]);
+		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT_global[0], trkVec.at(trackPos).extraPosDUT_global[1]);
 		      trkEvtLowPH->Fill(trkVec.size());
 		      stripHPHDiffExtraLowPH->Fill(hiChargeCh - highestPHstrip);
 		    }
