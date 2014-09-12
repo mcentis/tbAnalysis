@@ -163,10 +163,10 @@ int main(int argc, char* argv[])
   Double_t        dutTrackY_global;
   Double_t        dutTrackX_local;  // extrapolation of the track on the DUT, local ref frame
   Double_t        dutTrackY_local;
+  Double_t        dutTrackX_pixel; // extrapolation of the track on the DUT, in pixels / strips
+  Double_t        dutTrackY_pixel;
   Double_t        dutHitX_global; // measured DUT hit in global ref frame
   Double_t        dutHitY_global;
-  Double_t        dutPixelX;
-  Double_t        dutPixelY;
   Double_t        dutHitR; // distance between extrapolated and measured hit on DUT in global ref frame, mm
   Double_t        dutHitQ; // charge of the cluster hit on DUT, units of ADC * 100
   Float_t         alibava_TDC;
@@ -194,8 +194,8 @@ int main(int argc, char* argv[])
   trkTree->SetBranchAddress("dutTrackY_global",&dutTrackY_global);
   trkTree->SetBranchAddress("dutTrackX_local",&dutTrackX_local); // position extrapolated from the track fit on the DUT, local ref frame
   trkTree->SetBranchAddress("dutTrackY_local",&dutTrackY_local);
-  trkTree->SetBranchAddress("dutPixelX",&dutPixelX); // position extrapolated on the DUT, dut ref frame, in pixel / strip number
-  trkTree->SetBranchAddress("dutPixelY",&dutPixelY);
+  trkTree->SetBranchAddress("dutTrackX_pixel",&dutTrackX_pixel); // position extrapolated on the DUT, dut ref frame, in pixel / strip number
+  trkTree->SetBranchAddress("dutTrackY_pixel",&dutTrackY_pixel);
   trkTree->SetBranchAddress("dutHitX_global",&dutHitX_global); // cluster matched on the alibava
   trkTree->SetBranchAddress("dutHitY_global",&dutHitY_global);
   trkTree->SetBranchAddress("dutHitR",&dutHitR);
@@ -215,8 +215,8 @@ int main(int argc, char* argv[])
   trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
   trkTree->SetBranchStatus("dutTrackX_global", 1);
   trkTree->SetBranchStatus("dutTrackY_global", 1);
-  trkTree->SetBranchStatus("dutPixelX", 1);
-  trkTree->SetBranchStatus("dutPixelY", 1);
+  trkTree->SetBranchStatus("dutTrackX_pixel", 1);
+  trkTree->SetBranchStatus("dutTrackY_pixel", 1);
   trkTree->SetBranchStatus("dutHitX_global", 1);
   trkTree->SetBranchStatus("dutHitY_global", 1);
 
@@ -227,6 +227,11 @@ int main(int argc, char* argv[])
   trkVsEvt->SetTitle("Number of tracks vs event");
   trkVsEvt->SetMarkerStyle(7);
   TH1I* trkEvtSelected = new TH1I("traksEvtSelected", "Number of tracks per event in events that pass the event selection;Number of tracks;Entries", 11, -0.5, 10.5);
+
+  // check of time in the reconstruction
+  TH1D* timeTrack = new TH1D("timeTrack", "Time of the reconstructed tracks;Time [ns];Entries", 60, 0, 120);
+  TH2D* timeTrackPosY = new TH2D("timeTrackPosY", "Time and position in Y of the reconstructed tracks;Time [ns];y [mm]", 60, 0, 120, 100, -10, 10);
+  TH2D* adcTime = new TH2D("adcTime", "ADC PH vs time for all the channels;Time [ns];PH [ADC]", 60, 0, 120, 1024, -511.5, 511.5);
 
   // residuals
   TH1D* residualsX = new TH1D("residualsX", "Difference between matched cluster and extrapolated position along x;x_{matched} - x_{extrapolated} [mm];Entries", 501, -1.5, 1.5);
@@ -377,14 +382,17 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       trk->extraPosDUT_global[1] = dutTrackY_global;
       trk->extraPosDUT_local[0] = dutTrackX_local; // local reference frame
       trk->extraPosDUT_local[1] = dutTrackY_local;
-      trk->extraPosDUTpix[0] = dutPixelX; // dut ref frame, in pixel / strip number
-      trk->extraPosDUTpix[1] = dutPixelY;
+      trk->extraPosDUTpix[0] = dutTrackX_pixel; // dut ref frame, in pixel / strip number
+      trk->extraPosDUTpix[1] = dutTrackY_pixel;
       trk->measPosDUT_global[0] = dutHitX_global;
       trk->measPosDUT_global[1] = dutHitY_global;
       trk->entryNum = i; 
 
       hitMapDUTtele->Fill(dutTrackX_global, dutTrackY_global);
-      extraChDistr->Fill(dutPixelY);
+      extraChDistr->Fill(dutTrackY_pixel);
+
+      timeTrack->Fill(alibava_TDC);
+      timeTrackPosY->Fill(alibava_TDC, dutTrackY_global);
 
       if(evtMrk == EvtNr)
 	{ // add track info to some container
@@ -653,6 +661,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 	  // store the PH from alibava
 	  for(int iCh = 0; iCh < nChannels; ++iCh) evtAliPH[iCh] = alibavaPH[iCh] * scaleFactor; // a scale factor is applied on the need
+
+	  for(int iCh = 0; iCh < nChannels; ++iCh) adcTime->Fill(evtAliTime, evtAliPH[iCh]); // fill the histo
 	}
 
       delete trk;
@@ -981,6 +991,9 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   trkEvt->Write();
   trkVsEvt->Write();
   trkEvtSelected->Write();
+  timeTrack->Write();
+  timeTrackPosY->Write();
+  adcTime->Write();
 
   TDirectory* resDir = outFile->mkdir("Residuals");
   resDir->cd();
