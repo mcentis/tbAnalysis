@@ -167,6 +167,10 @@ int main(int argc, char* argv[])
   Double_t        dutTrackY_pixel;
   Double_t        dutHitX_global; // measured DUT hit in global ref frame
   Double_t        dutHitY_global;
+  Double_t        dutHitX_local;
+  Double_t        dutHitY_local;
+  Double_t        dutHitX_pixel;
+  Double_t        dutHitY_pixel;
   Double_t        dutHitR; // distance between extrapolated and measured hit on DUT in global ref frame, mm
   Double_t        dutHitQ; // charge of the cluster hit on DUT, units of ADC * 100
   Float_t         alibava_TDC;
@@ -198,6 +202,10 @@ int main(int argc, char* argv[])
   trkTree->SetBranchAddress("dutTrackY_pixel",&dutTrackY_pixel);
   trkTree->SetBranchAddress("dutHitX_global",&dutHitX_global); // cluster matched on the alibava
   trkTree->SetBranchAddress("dutHitY_global",&dutHitY_global);
+  trkTree->SetBranchAddress("dutHitX_local",&dutHitX_local); // cluster matched on the alibava
+  trkTree->SetBranchAddress("dutHitY_local",&dutHitY_local);
+  trkTree->SetBranchAddress("dutHitX_pixel",&dutHitX_pixel); // cluster matched on the alibava
+  trkTree->SetBranchAddress("dutHitY_pixel",&dutHitY_pixel);
   trkTree->SetBranchAddress("dutHitR",&dutHitR);
   trkTree->SetBranchAddress("dutHitQ",&dutHitQ);
   trkTree->SetBranchAddress("alibava_tdc",&alibava_TDC);
@@ -382,8 +390,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       trk->extraPosDUT_global[1] = dutTrackY_global;
       trk->extraPosDUT_local[0] = dutTrackX_local; // local reference frame
       trk->extraPosDUT_local[1] = dutTrackY_local;
-      trk->extraPosDUTpix[0] = dutTrackX_pixel; // dut ref frame, in pixel / strip number
-      trk->extraPosDUTpix[1] = dutTrackY_pixel;
+      trk->extraPosDUT_pixel[0] = dutTrackX_pixel; // dut ref frame, in pixel / strip number
+      trk->extraPosDUT_pixel[1] = dutTrackY_pixel;
       trk->measPosDUT_global[0] = dutHitX_global;
       trk->measPosDUT_global[1] = dutHitY_global;
       trk->entryNum = i; 
@@ -425,7 +433,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      residualsYvsEvt->Fill(evtMrk, trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
 		    }
 
-		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
+		  extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
 		  for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // exclude channels that may have charge deposit from the noise analysis
 		    if(iCh >= 0 && iCh < nChannels) // protect limits
 		      goodNoise[iCh] = false;
@@ -493,7 +501,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
 	  for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y and X)
 	    {
-	      extraCh = trkVec.at(iTrk).extraPosDUTpix[1];
+	      extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
 
 	      if(trkVec.at(iTrk).extraPosDUT_global[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT_global[0] >= xCut2) // geom cut in X
 		analyzeEvent = false;
@@ -517,7 +525,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	      trkEvtSelected->Fill(nTrks);
 	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // loop to select the right track
 	      	{
-		  extraCh = trkVec.at(iTrk).extraPosDUTpix[1]; // this should be right thing
+		  extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1]; // this should be right thing
 
 		  hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).extraPosDUT_global[1]);
 		  extraChDistrGoodCh->Fill(extraCh);
@@ -596,7 +604,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      // hitmap and charge map mod 160 (on 2 strips)
 		      posX = 1000 * trkVec.at(trackPos).extraPosDUT_global[0]; // assign the positions in x and y
 		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT_global[1]) % (int)(2 * pitch * 1000));
-		      //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUTpix[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
+		      //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUT_pixel[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
 		      iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
 		      oldContent = chargeMapMod160->GetBinContent(iBin);
 		      chargeMapMod160->SetBinContent(iBin, oldContent + highestCharge * polarity);
@@ -612,7 +620,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      
 		      hitMap->Fill(posX, posY);
 
-		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUTpix[1], intPart), highestCharge * polarity);
+		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), highestCharge * polarity);
 		    }
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
