@@ -221,10 +221,8 @@ int main(int argc, char* argv[])
   trkTree->SetBranchStatus("*", 0);
   trkTree->SetBranchStatus("EvtNr", 1);
   trkTree->SetBranchStatus("alibava*", 1); // all the alibava info
-  trkTree->SetBranchStatus("dutTrackX_global", 1);
-  trkTree->SetBranchStatus("dutTrackY_global", 1);
-  trkTree->SetBranchStatus("dutTrackX_pixel", 1);
-  trkTree->SetBranchStatus("dutTrackY_pixel", 1);
+  trkTree->SetBranchStatus("dutTrackX_*", 1);
+  trkTree->SetBranchStatus("dutTrackY_*", 1);
   trkTree->SetBranchStatus("dutHitX_global", 1);
   trkTree->SetBranchStatus("dutHitY_global", 1);
 
@@ -602,8 +600,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 
 		      // hitmap and charge map mod 160 (on 2 strips)
-		      posX = 1000 * trkVec.at(trackPos).extraPosDUT_global[0]; // assign the positions in x and y
-		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT_global[1]) % (int)(2 * pitch * 1000));
+		      posX = 1000 * trkVec.at(trackPos).extraPosDUT_local[0]; // assign the positions in x and y
+		      posY = abs((int)(1000 * trkVec.at(trackPos).extraPosDUT_local[1]) % (int)(2 * pitch * 1000));
 		      //posY = abs((int)(1000 * (trkVec.at(trackPos).extraPosDUT_pixel[1] * pitch + 0.5 * pitch)) % (int)(2 * pitch * 1000));
 		      iBin = chargeMapMod160->FindBin(posX, posY); // find the bin
 		      oldContent = chargeMapMod160->GetBinContent(iBin);
@@ -612,8 +610,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      hitMapMod160->Fill(posX, posY);
 		      //std::cout << hitMapMod160->GetEntries() << std::endl;
 		      //hitmap and charge map over the sensor
-		      posX = trkVec.at(trackPos).extraPosDUT_global[0];
-		      posY = trkVec.at(trackPos).extraPosDUT_global[1];
+		      posX = trkVec.at(trackPos).extraPosDUT_local[0];
+		      posY = trkVec.at(trackPos).extraPosDUT_local[1];
 		      iBin = chargeMap->FindBin(posX, posY); // find the bin
 		      oldContent = chargeMap->GetBinContent(iBin);
 		      chargeMap->SetBinContent(iBin, oldContent + highestCharge * polarity);
