@@ -7,7 +7,6 @@
 #the root files are expected to have the .root extension
 
 unsDir=$2 #directory with unsorted files
-#jobCount=0 #number of daughter jobs
 
 for iSens in $(ls -d $1/*/)
 do
