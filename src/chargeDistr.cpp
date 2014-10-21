@@ -52,6 +52,57 @@ TF1* fitResiduals(TH1* inHist, double range1, double range2)
   return fitFunc;
 }
 
+std::vector<int> readGoodChFile(const char* chFileName)
+{
+  std::vector<int> goodChannels;
+  const int nChannels = 256; // channels of the readout system
+
+  std::ifstream chStr;
+  chStr.open(chFileName, std::ifstream::in);
+
+  if(chStr.is_open() == false)
+    {
+      std::cout << "Impossible to open the file " << chFileName << "\nAll channels will be used" << std::endl;
+      for(int i = 0; i < nChannels; i++) goodChannels.push_back(i);
+      return goodChannels;
+    }
+
+  std::string line;
+  std::string::iterator newEnd; // end of the string after remove
+  unsigned int sharpPos; // position of the #
+
+  while(!chStr.eof())
+    {
+      line.clear();
+
+      std::getline(chStr, line);
+
+      if(line.length() == 0) continue; // empty line
+
+      sharpPos = line.find('#');
+      if(sharpPos == 0) continue; // full comment line, skip
+
+      if(sharpPos < line.size()) // sharp found
+      line.resize(sharpPos); // ignore what comes after the #
+
+      // removes all the spaces from the string, remove does not change the length of the string, it is necessary to resize the string
+      newEnd = std::remove(line.begin(), line.end(), ' ');
+      if(newEnd == line.begin()) continue; // string of spaces and comments
+      line.resize(newEnd - line.begin()); // resize the string to its new size
+
+      // same treatment for the \t
+      newEnd = std::remove(line.begin(), line.end(), '\t');
+      if(newEnd == line.begin()) continue; // string of spaces, tabs and comments
+      line.resize(newEnd - line.begin()); // resize the string to its new size
+
+      goodChannels.push_back(atoi(line.c_str()));
+    }
+
+  chStr.close();
+
+  return goodChannels;
+}
+
 int main(int argc, char* argv[])
 {
   if(argc != 3)
@@ -127,6 +178,8 @@ int main(int argc, char* argv[])
   // else
   //   scaleFactor = 1;
 
+  std::vector<int> goodChVec = readGoodChFile(conf->GetValue("goodChFile").c_str()); // good channels
+
   double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
   double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
   double tCorr_p2 = atof(conf->GetValue("tCorr_p2").c_str());
@@ -175,7 +228,7 @@ int main(int argc, char* argv[])
   Double_t        dutHitQ; // charge of the cluster hit on DUT, units of ADC * 100
   Float_t         alibava_TDC;
   Float_t         alibava_temp;
-  Double_t        alibavaPH[nChannels];
+  Double_t        alibavaPH[nChannels] = {0.};
 
   // Set branch addresses.
   trkTree->SetBranchAddress("Event",&Event);
@@ -211,10 +264,10 @@ int main(int argc, char* argv[])
   trkTree->SetBranchAddress("alibava_tdc",&alibava_TDC);
   trkTree->SetBranchAddress("alibava_temp",&alibava_temp);
 
-  for(int i = 0; i < nChannels; ++i)
+  for(std::vector<int>::iterator ch = goodChVec.begin(); ch != goodChVec.end(); ch++) // associate just the good channels
     {
-      sprintf(name, "alibava_reco_ch_%i", i);
-      trkTree->SetBranchAddress(name,&alibavaPH[i]);
+      sprintf(name, "alibava_reco_ch_%i", *ch);
+      trkTree->SetBranchAddress(name,&alibavaPH[*ch]);
     }
 
   // activate the interesting branches
