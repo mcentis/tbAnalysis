@@ -302,6 +302,7 @@ int main(int argc, char* argv[])
   TH2D* residualsXvsY = new TH2D("residualsXvsY", "Difference between matched cluster and extrapolated position along x as function of y;y_{extrapolated} [mm];x_{matched} - x_{extrapolated} [mm];Entries", 501, -10, 10, 501, -1.5, 1.5);
   TH2D* residualsYvsEvt = new TH2D("residualsYvsEvt", "Difference between matched cluster and extrapolated position along y as function of event number;Event number;y_{matched} - y_{extrapolated} [mm];Entries", 500, 0, 5e5, 501, -1.5, 1.5);
   TH2D* residualsYvsEntry = new TH2D("residualsYvsEntry", "Difference between matched cluster and extrapolated position along y as function of entry number;Entry number;y_{matched} - y_{extrapolated} [mm];Entries", 5000, 0, 5e6, 501, -1.5, 1.5);
+  TH1D* residualsYselected = new TH1D("residualsYselected", "Difference between matched cluster and extrapolated position along y in events that pass the event selection;y_{matched} - y_{extrapolated} [mm];Entries", 501, -1.5, 1.5);
 
   // hitmaps
   TH2D* hitMapDUTtele = new TH2D("hitMapDUTtele", "Extrapolated position of the tracks on the strip sensor;x [mm];y [mm]", 200, -20, 20, 100, -10, 10);
@@ -489,7 +490,12 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      residualsYvsEvt->Fill(evtMrk, trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
 		    }
 
-		  extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
+		  // the center of the channel is at 0
+		  if(modf(trkVec.at(iTrk).extraPosDUT_pixel[1], intPart) < 0.5)
+		    extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
+		  else
+		    extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1] + 1;
+
 		  for(int iCh = extraCh - maxDist; iCh <= extraCh + maxDist; ++iCh) // exclude channels that may have charge deposit from the noise analysis
 		    if(iCh >= 0 && iCh < nChannels) // protect limits
 		      goodNoise[iCh] = false;
@@ -557,7 +563,11 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	  analyzeEvent = true; // variable that determines wether an event will be analyzed for the charge
 	  for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // check that all the tracks are in the geom cut (in Y and X)
 	    {
-	      extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
+	      // the center of the channel is at 0
+	      if(modf(trkVec.at(iTrk).extraPosDUT_pixel[1], intPart) < 0.5)
+		extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
+	      else
+		extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1] + 1;
 
 	      if(trkVec.at(iTrk).extraPosDUT_global[0] <= xCut1 || trkVec.at(iTrk).extraPosDUT_global[0] >= xCut2) // geom cut in X
 		analyzeEvent = false;
@@ -579,9 +589,18 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 	  if(analyzeEvent) // all the event tracks in a sensitive part of the sensor and at least one track
 	    {
 	      trkEvtSelected->Fill(nTrks);
+
+	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // residuals of selected events
+		if(trkVec.at(iTrk).measPosDUT_global[0] > -900 && trkVec.at(iTrk).measPosDUT_global[1] > -900) // if there is a matched hit
+		  residualsYselected->Fill(trkVec.at(iTrk).measPosDUT_global[1] - trkVec.at(iTrk).extraPosDUT_global[1]);
+
 	      for(unsigned int iTrk = 0; iTrk < trkVec.size(); ++iTrk) // loop to select the right track
 	      	{
-		  extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1]; // this should be right thing
+		  // the center of the channel is at 0
+		  if(modf(trkVec.at(iTrk).extraPosDUT_pixel[1], intPart) < 0.5)
+		    extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1];
+		  else
+		    extraCh = trkVec.at(iTrk).extraPosDUT_pixel[1] + 1;
 
 		  hitMapDUTgoodCh->Fill(trkVec.at(iTrk).extraPosDUT_global[0], trkVec.at(iTrk).extraPosDUT_global[1]);
 		  extraChDistrGoodCh->Fill(extraCh);
@@ -799,6 +818,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
   fitResiduals(residualsX, -0.5, 0.5);
   fitResiduals(residualsY, -0.25, 0.25);
+  fitResiduals(residualsYselected, -0.15, 0.15);
 
   gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
              		noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
@@ -1080,6 +1100,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   profileResYvsX->Write();
   residualsYvsEvt->Write();
   residualsYvsEntry->Write();
+  residualsYselected->Write();
 
   outFile->cd();
   hitMapDUTtele->Write();
