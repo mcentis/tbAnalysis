@@ -377,7 +377,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
 
-  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
+  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut, dist cut;#eta;Entries", 200, -0.5, 1.5);
+  TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
 
   TH1D* noiseHistCh[nChannels]; // calculation of the noise
   for(int i = 0; i < nChannels; ++i)
@@ -445,6 +446,10 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       trk->extraPosDUT_pixel[1] = dutTrackY_pixel;
       trk->measPosDUT_global[0] = dutHitX_global;
       trk->measPosDUT_global[1] = dutHitY_global;
+      trk->measPosDUT_local[0] = dutHitX_local;
+      trk->measPosDUT_local[1] = dutHitY_local;
+      trk->measPosDUT_pixel[0] = dutHitX_pixel;
+      trk->measPosDUT_pixel[1] = dutHitY_pixel;
       trk->entryNum = i; 
 
       hitMapDUTtele->Fill(dutTrackX_global, dutTrackY_global);
@@ -673,6 +678,12 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), highestCharge * polarity);
 		    }
+
+		  // totally track based eta distr
+		  //the center of the channel is at 0
+		  phL = evtAliPH[hiChargeCh];
+		  phR = evtAliPH[hiChargeCh + 1];
+		  etaDistrTrackTimeCut->Fill(phR / (phR + phL));
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
@@ -1130,6 +1141,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   signalStrip->Write();
   mpvStrip->Write();
   etaDistrTimeCutDistCut->Write();
+  etaDistrTrackTimeCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
