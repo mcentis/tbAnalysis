@@ -36,18 +36,15 @@ TF1* fitResiduals(TH1* inHist, double range1, double range2)
 {
   double fr1 = inHist->GetMean() - inHist->GetRMS();
   double fr2 = inHist->GetMean() + inHist->GetRMS();
-  TF1* gausFit = new TF1("gausFit", "gaus", fr1, fr2);
+  TF1* gausFit = new TF1("gausFit", "gaus", fr1, fr2); // fit with gauss
   inHist->Fit(gausFit, "RQ");
 
   TF1* fitFunc = new TF1("fitFunc", "gaus + [3]", range1, range2);
   fitFunc->SetParNames("Const", "Mean", "Sigma", "Offset");
   fitFunc->SetLineColor(kRed);
-  fitFunc->SetParameter(0, gausFit->GetParameter(0));
-  fitFunc->SetParameter(1, gausFit->GetParameter(1)); // the distr is expected to be symmetric
+  fitFunc->SetParameter(0, gausFit->GetParameter(0)); // use gauss parameter as start values
+  fitFunc->SetParameter(1, gausFit->GetParameter(1));
   fitFunc->SetParameter(2, gausFit->GetParameter(2));
-  // fitFunc->SetParameter(0, inHist->GetMaximum());
-  // fitFunc->SetParameter(1, inHist->GetMean()); // the distr is expected to be symmetric
-  // fitFunc->SetParameter(2, inHist->GetRMS() * 0.5);
   fitFunc->SetParameter(3, 0); // no offset
 
   fitFunc->SetParLimits(0, 0, inHist->GetEntries());
