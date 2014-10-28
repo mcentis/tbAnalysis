@@ -376,7 +376,7 @@ int main(int argc, char* argv[])
 	      }
 
 	  resDir = (TDirectory*) inFile->Get("Residuals");
-	  resYDistr = (TH1*) resDir->Get("residualsY");
+	  resYDistr = (TH1*) resDir->Get("residualsYselected");
 	  func = resYDistr->GetFunction("fitFunc");
 
 	  resYGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
