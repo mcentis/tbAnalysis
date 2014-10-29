@@ -300,6 +300,15 @@ Double_t gausNoiseLangaufun(Double_t* x, Double_t* par) // a peak at 0 and a lan
 // just fix the gaus parameters of the gaussian close to 0, the rest is free
 TF1* gausLanGausFitFixGausNoise(TH1* inHist, double negSigmaFit, double posSigmaFit, double mean, double sigma) // gauss parameters (mean and sigma) from another histo
 {
+  // subtract the noise from the starting histo to determine the landau gauss parameters
+  // TF1* noise = new TF1("noise", "gaus", inHist->GetXaxis()->GetXmin(), inHist->GetXaxis()->GetXmax());
+  // noise->SetParameter(0, inHist->GetBinContent(inHist->FindBin(0)));
+  // noise->SetParameter(1, mean);
+  // noise->SetParameter(2, sigma);
+  // TH1D* subHist = new TH1D(*inHist);
+  // subHist->Add(noise , -1);
+
+  // TF1* langauFunc = lanGausFit(subHist, negSigmaFit, posSigmaFit);
   TF1* langauFunc = lanGausFit(inHist, negSigmaFit, posSigmaFit);
 
   const int nPars = 7;
