@@ -705,10 +705,16 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		    }
 
 		  // totally track based eta distr
-		  //the center of the channel is at 0
-		  phL = evtAliPH[hiChargeCh];
-		  phR = evtAliPH[hiChargeCh + 1];
+		  //the center of the channel is at 0 (hiChargeCh alone does not have enough information for this)
+		  modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart);
+		  phL = evtAliPH[(int) *intPart];
+		  phR = evtAliPH[(int) *intPart + 1];
+
 		  etaDistrTrackTimeCut->Fill(phR / (phR + phL));
+
+		  // output for test
+		  // modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart);
+		  // if(hiChargeCh != *intPart) std::cout << "difference!!  " << trkVec.at(trackPos).extraPosDUT_pixel[1] << "   " << hiChargeCh << "    " << *intPart << "   " << hiChargeCh - *intPart << std::endl;
 
 		  for(int iCh = 0; iCh < nChannels; ++iCh)
 		    if(evtAliPH[iCh] != 0 && !(iCh >= hiChargeCh - maxDist && iCh <= hiChargeCh - maxDist)) // no ph == 0 and no ch belonging to the hit
