@@ -384,8 +384,14 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
 
-  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut, dist cut;#eta;Entries", 200, -0.5, 1.5);
-  TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", 200, -0.5, 1.5);
+  // eta distribution
+  minX = -0.5;
+  maxX = 1.5;
+  binX = 200;
+  TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut, dist cut;#eta;Entries", binX, minX, maxX);
+  TH1D* CDFetaDistrTimeCutDistCut = new TH1D("CDFetaDistrTimeCutDistCut", "CDF #eta distribution in the time cut, dist cut;#eta;#int #eta", binX, minX, maxX);
+  TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", binX, minX, maxX);
+  TH1D* CDFetaDistrTrackTimeCut = new TH1D("CDFetaDistrTrackTimeCut", "CDF track based #eta distribution in the time cut;#eta;#int #eta", binX, minX, maxX);
 
   TH1D* noiseHistCh[nChannels]; // calculation of the noise
   for(int i = 0; i < nChannels; ++i)
@@ -659,6 +665,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		  signalDistrTimeCut->Fill(highestCharge * polarity);
 
 		  if(abs(hiChargeCh - highestPHstrip) <= 1) // the strip with the highest PH is neighboring the hit one
+		  //if(hiChargeCh == highestPHstrip) // the strip with the highest PH is the hit one
 		    {
 		      signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
 		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
@@ -702,7 +709,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		      hitMap->Fill(posX, posY);
 
 		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), highestCharge * polarity);
-		    }
+		    } // distance cut
 
 		  // totally track based eta distr
 		  //the center of the channel is at 0 (hiChargeCh alone does not have enough information for this)
@@ -739,7 +746,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 			phAroundHPHstripTimeCut->Fill(iCh - highestPHstrip, evtAliPH[iCh] * polarity);
 			phAroundExtraStripTimeCut->Fill(iCh - hiChargeCh, evtAliPH[iCh] * polarity);
 		      }		 
-		}
+		} // time cut
 	      tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	      tempDistr->Fill(evtAliTemp);
 	    } // the analysis of the event should be contained in this scope
@@ -1042,6 +1049,27 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       noiseDistr_integral->SetBinContent(i, intBin / totArea);
     }
 
+  // nomalized CDF of the eta distros
+  binStart = 1;
+  binStop = etaDistrTimeCutDistCut->GetXaxis()->GetNbins();
+  totArea = etaDistrTimeCutDistCut->Integral(binStart, binStop);
+
+  for(int i = binStart; i < binStop + 1; ++i)
+    {
+      intBin = etaDistrTimeCutDistCut->Integral(binStart, i);
+      CDFetaDistrTimeCutDistCut->SetBinContent(i, intBin / totArea);
+    }
+
+  binStart = 1;
+  binStop = etaDistrTrackTimeCut->GetXaxis()->GetNbins();
+  totArea = etaDistrTrackTimeCut->Integral(binStart, binStop);
+
+  for(int i = binStart; i < binStop + 1; ++i)
+    {
+      intBin = etaDistrTrackTimeCut->Integral(binStart, i);
+      CDFetaDistrTrackTimeCut->SetBinContent(i, intBin / totArea);
+    }
+
   // draw graphs to name the axis
   TCanvas* servCan = new TCanvas("servCan");
   servCan->cd();
@@ -1175,6 +1203,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   mpvStrip->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
+  CDFetaDistrTimeCutDistCut->Write();
+  CDFetaDistrTrackTimeCut->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
