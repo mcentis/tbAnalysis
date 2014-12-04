@@ -102,10 +102,12 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> noiseGroupBiasVec;
   std::vector<TGraphErrors*> noisePairBiasVec;
   std::vector<TGraphErrors*> eff95BiasVec;
+  std::vector<TGraphErrors*> chargeSharingBiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
   std::vector<TGraphErrors*> chipTempBiasVec;
 
   std::vector<TCanvas*> histSupVec; // canvases with the superimposition of the used histos
+  std::vector<TCanvas*> etaSupVec; // canvases with the superimposition of the used eta distr
 
   std::vector<double> bias;
   std::vector<double> angle;
@@ -122,6 +124,7 @@ int main(int argc, char* argv[])
   TH1* noiseGroupDistr;
   TH1* noisePairDistr;
   TH1* intSeedDistr;
+  TH1* etaDistr;
   TH1* resYDistr;
   TH1* tempDistr;
   TDirectory* resDir;
@@ -133,9 +136,11 @@ int main(int argc, char* argv[])
   TGraphErrors* noiseGroupGr;
   TGraphErrors* noisePairGr;
   TGraphErrors* eff95Gr;
+  TGraphErrors* chargeSharingGr;
   TGraphErrors* resYGr;
   TGraphErrors* chipTempGr;
-  TCanvas* histSupCan; // each sensor gets a canvas
+  TCanvas* histSupCan; // each sensor gets a canvas (charge distribution)
+  TCanvas* etaSupCan; // each sensor gets a canvas (eta distribution)
 
   char name[200];
   char title[500];
@@ -143,6 +148,12 @@ int main(int argc, char* argv[])
   int iColor = 0; // color of the graphs
   int mrkStyle = 0; // marker style
   int iColHist = 0; // color for the histograms
+  int iColEta = 0; // color for the histograms
+
+  int startBin;
+  int endBin;
+  double chargeSharing;
+  double EchargeSharing;
 
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors
     {
@@ -311,6 +322,17 @@ int main(int argc, char* argv[])
       eff95Gr->SetMarkerColor(iColor);
       eff95Gr->SetLineStyle(linStyle);
 
+      sprintf(name, "chargeSharing_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      chargeSharingGr = new TGraphErrors();
+      chargeSharingGr->SetName(name);
+      chargeSharingGr->SetTitle(title);
+      chargeSharingGr->SetMarkerStyle(mrkStyle);
+      chargeSharingGr->SetFillColor(kWhite);
+      chargeSharingGr->SetLineColor(iColor); // set line color and style
+      chargeSharingGr->SetMarkerColor(iColor);
+      chargeSharingGr->SetLineStyle(linStyle);
+
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
@@ -338,6 +360,12 @@ int main(int argc, char* argv[])
       histSupCan = new TCanvas(name, title);
       histSupCan->SetGridx();
       histSupCan->SetGridy();
+
+      sprintf(name, "etaSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "#eta distributions at different biases %s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      etaSupCan = new TCanvas(name, title);
+      etaSupCan->SetGridx();
+      etaSupCan->SetGridy();
 
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
 	{
@@ -397,6 +425,31 @@ int main(int argc, char* argv[])
 		break;
 	      }
 
+	  etaDistr = (TH1*) inFile->Get("etaDistrTimeCutDistCut"); // from the "clusters"
+	  //etaDistr = (TH1*) inFile->Get("etaDistrTrackTimeCut"); // track based
+	  etaDistr->Sumw2();
+	  etaDistr->Scale(1 / etaDistr->Integral());
+
+	  startBin = etaDistr->GetXaxis()->FindBin(0.2);
+	  endBin = etaDistr->GetXaxis()->FindBin(0.8);
+	  chargeSharing = etaDistr->IntegralAndError(startBin, endBin, EchargeSharing) / 0.6;
+	  EchargeSharing /= 0.6;
+
+	  chargeSharingGr->SetPoint(iRun, fabs(bias.at(iRun)), chargeSharing);
+	  chargeSharingGr->SetPointError(iRun, 0, EchargeSharing);
+
+	  iColEta = iRun % 9 + 1;
+	  if(iColEta == 5) ++iColEta; // skip yellow
+	  etaDistr->SetLineColor(iColEta);
+	  sprintf(title, "%.00f", bias.at(iRun));
+	  etaDistr->SetTitle(title);
+	  //etaDistr->SetLineWidth(2);
+	  etaSupCan->cd();
+	  if(iRun == 0) etaDistr->Draw("E");
+	  else etaDistr->Draw("Esame");
+	  // if(iRun == 0) etaDistr->Draw("hist");
+	  // else etaDistr->Draw("histsame");
+
 	  resDir = (TDirectory*) inFile->Get("Residuals");
 	  resYDistr = (TH1*) resDir->Get("residualsYselected");
 	  func = resYDistr->GetFunction("fitFunc");
@@ -431,9 +484,11 @@ int main(int argc, char* argv[])
       noiseGroupBiasVec.push_back(noiseGroupGr);
       noisePairBiasVec.push_back(noisePairGr);
       eff95BiasVec.push_back(eff95Gr);
+      chargeSharingBiasVec.push_back(chargeSharingGr);
       resYBiasVec.push_back(resYGr);
       chipTempBiasVec.push_back(chipTempGr);
       histSupVec.push_back(histSupCan);
+      etaSupVec.push_back(etaSupCan);
 
     } // loop on the sensors
 
@@ -699,6 +754,10 @@ int main(int argc, char* argv[])
   eff95AllSensors->SetName("eff95AllSensors");
   eff95AllSensors->SetTitle("Threshold to get 95% efficiency vs bias");
 
+  TMultiGraph* chargeSharingAllSensors = new TMultiGraph();
+  chargeSharingAllSensors->SetName("chargeSharingAllSensors");
+  chargeSharingAllSensors->SetTitle("Charge sharing vs bias");
+
   TMultiGraph* resYAllSensors = new TMultiGraph();
   resYAllSensors->SetName("resYAllSensors");
   resYAllSensors->SetTitle("#sigma resduals Y vs bias");
@@ -826,6 +885,19 @@ int main(int argc, char* argv[])
   eff95AllSensors->Draw("AP");
   eff95AllSensors->GetXaxis()->SetTitle("Bias [V]");
   eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC]");
+
+  for(unsigned int i = 0; i < chargeSharingBiasVec.size(); ++i) // loop on the graphs
+    {
+      chargeSharingBiasVec.at(i)->Draw("AP");
+      chargeSharingBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      chargeSharingBiasVec.at(i)->GetYaxis()->SetTitle("Charge sharing");
+
+      chargeSharingAllSensors->Add(chargeSharingBiasVec.at(i));
+    }
+
+  chargeSharingAllSensors->Draw("AP");
+  chargeSharingAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  chargeSharingAllSensors->GetYaxis()->SetTitle("Charge sharing");
 
   for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1003,6 +1075,20 @@ int main(int argc, char* argv[])
   eff95AllSenCan->Update();
   eff95AllSenCan->Write();
 
+  // for(unsigned int i = 0; i < chargeSharingBiasVec.size(); ++i) // loop on the graphs
+  //   chargeSharingBiasVec.at(i)->Write();
+  chargeSharingAllSensors->Write();
+
+  TCanvas* chargeSharingAllSenCan = new TCanvas("chargeSharingAllSenCan");
+  chargeSharingAllSensors->Draw("APL");
+  leg = chargeSharingAllSenCan->BuildLegend();
+  leg->SetFillColor(kWhite);
+  chargeSharingAllSenCan->SetGridx();
+  chargeSharingAllSenCan->SetGridy();
+  chargeSharingAllSenCan->Modified();
+  chargeSharingAllSenCan->Update();
+  chargeSharingAllSenCan->Write();
+
   // for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
   //   resYBiasVec.at(i)->Write();
   resYAllSensors->Write();
@@ -1036,6 +1122,13 @@ int main(int argc, char* argv[])
       leg = histSupVec.at(i)->BuildLegend();
       leg->SetFillColor(kWhite);
       histSupVec.at(i)->Write();
+    }
+
+  for(unsigned int i = 0; i < etaSupVec.size(); ++i)
+    {
+      leg = etaSupVec.at(i)->BuildLegend();
+      leg->SetFillColor(kWhite);
+      etaSupVec.at(i)->Write();
     }
 
   TCanvas* corrMPVmaxFitAllSenCan = new TCanvas("corrMPVmaxFitAllSenCan");
