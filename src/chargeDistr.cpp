@@ -379,7 +379,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 8, -0, 1, 151, -50.5, 511.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 8, 0, 1, 151, -50.5, 511.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
@@ -392,6 +392,10 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   TH1D* CDFetaDistrTimeCutDistCut = new TH1D("CDFetaDistrTimeCutDistCut", "CDF #eta distribution in the time cut, dist cut;#eta;#int #eta", binX, minX, maxX);
   TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", binX, minX, maxX);
   TH1D* CDFetaDistrTrackTimeCut = new TH1D("CDFetaDistrTrackTimeCut", "CDF track based #eta distribution in the time cut;#eta;#int #eta", binX, minX, maxX);
+
+  // scatter plot eta
+  TH2D* etaClustVsPos = new TH2D("etaClustVsPos", "Cluster #eta vs reduced track position;Position in the strip [AU];#eta cluster", 50, 0, 1, binX, minX, maxX);
+  TH2D* etaTrackVsPos = new TH2D("etaTrackVsPos", "Track #eta vs reduced track position;Position in the strip [AU];#eta track", 50, 0, 1, binX, minX, maxX);
 
   TH1D* noiseHistCh[nChannels]; // calculation of the noise
   for(int i = 0; i < nChannels; ++i)
@@ -687,6 +691,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 			}
 		      etaDistrTimeCutDistCut->Fill(phR / (phR + phL));
 
+		      etaClustVsPos->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), phR / (phR + phL));
+
 		      stripHPH_plusNeigh_DistrTimeCutDistCut->Fill(phR + phL);
 
 		      // hitmap and charge map mod 160 (on 2 strips)
@@ -718,6 +724,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		  phR = evtAliPH[(int) *intPart + 1];
 
 		  etaDistrTrackTimeCut->Fill(phR / (phR + phL));
+
+		  etaTrackVsPos->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), phR / (phR + phL));
 
 		  // output for test
 		  // modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart);
@@ -1205,6 +1213,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   etaDistrTrackTimeCut->Write();
   CDFetaDistrTimeCutDistCut->Write();
   CDFetaDistrTrackTimeCut->Write();
+  etaClustVsPos->Write();
+  etaTrackVsPos->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
