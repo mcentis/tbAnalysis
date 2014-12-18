@@ -109,6 +109,8 @@ int main(int argc, char* argv[])
   std::vector<TCanvas*> histSupVec; // canvases with the superimposition of the used histos
   std::vector<TCanvas*> etaSupVec; // canvases with the superimposition of the used eta distr
 
+  std::vector<TMultiGraph*> chargePosSupVec; // suiperimposition of the charge vs pos
+
   std::vector<double> bias;
   std::vector<double> angle;
   std::vector<int> run;
@@ -139,16 +141,18 @@ int main(int argc, char* argv[])
   TGraphErrors* chargeSharingGr;
   TGraphErrors* resYGr;
   TGraphErrors* chipTempGr;
+  TGraphErrors* chargePos;
   TCanvas* histSupCan; // each sensor gets a canvas (charge distribution)
   TCanvas* etaSupCan; // each sensor gets a canvas (eta distribution)
+  TMultiGraph* chargePosSup; // each sensor gets a graph
+
 
   char name[200];
   char title[500];
   int linStyle = 0;
   int iColor = 0; // color of the graphs
   int mrkStyle = 0; // marker style
-  int iColHist = 0; // color for the histograms
-  int iColEta = 0; // color for the histograms
+  int iColSuper = 0; // color for superimpositions
 
   int startBin;
   int endBin;
@@ -367,6 +371,10 @@ int main(int argc, char* argv[])
       etaSupCan->SetGridx();
       etaSupCan->SetGridy();
 
+      sprintf(name, "chargePosSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "Charge vs position at different biases %s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      chargePosSup = new TMultiGraph(name, title);
+
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
 	{
 	  sprintf(name, "%s/%d.root", argv[2], run.at(iRun));
@@ -438,9 +446,9 @@ int main(int argc, char* argv[])
 	  chargeSharingGr->SetPoint(iRun, fabs(bias.at(iRun)), chargeSharing);
 	  chargeSharingGr->SetPointError(iRun, 0, EchargeSharing);
 
-	  iColEta = iRun % 9 + 1;
-	  if(iColEta == 5) ++iColEta; // skip yellow
-	  etaDistr->SetLineColor(iColEta);
+	  iColSuper = iRun % 9 + 1;
+	  if(iColSuper >= 5) ++iColSuper; // skip yellow
+	  etaDistr->SetLineColor(iColSuper);
 	  sprintf(title, "%.00f", bias.at(iRun));
 	  etaDistr->SetTitle(title);
 	  //etaDistr->SetLineWidth(2);
@@ -449,6 +457,13 @@ int main(int argc, char* argv[])
 	  else etaDistr->Draw("Esame");
 	  // if(iRun == 0) etaDistr->Draw("hist");
 	  // else etaDistr->Draw("histsame");
+
+	  chargePos = (TGraphErrors*) inFile->Get("mpvStrip");
+	  chargePos->SetLineColor(iColSuper);
+	  chargePos->SetFillColor(kWhite);
+	  sprintf(title, "%.00f", bias.at(iRun));
+	  chargePos->SetTitle(title);
+	  chargePosSup->Add(chargePos);
 
 	  resDir = (TDirectory*) inFile->Get("Residuals");
 	  resYDistr = (TH1*) resDir->Get("residualsYselected");
@@ -461,10 +476,7 @@ int main(int argc, char* argv[])
 	  chipTempGr->SetPoint(iRun, fabs(bias.at(iRun)), tempDistr->GetMean());
 	  chipTempGr->SetPointError(iRun, 0, tempDistr->GetRMS());
 
-
-	  iColHist = iRun % 9 + 1;
-	  if(iColHist == 5) ++iColHist; // skip yellow
-	  chDistr->SetLineColor(iColHist);
+	  chDistr->SetLineColor(iColSuper);
 	  sprintf(title, "%.00f", bias.at(iRun));
 	  chDistr->SetTitle(title);
 	  //chDistr->SetLineWidth(2);
@@ -489,6 +501,7 @@ int main(int argc, char* argv[])
       chipTempBiasVec.push_back(chipTempGr);
       histSupVec.push_back(histSupCan);
       etaSupVec.push_back(etaSupCan);
+      chargePosSupVec.push_back(chargePosSup);
 
     } // loop on the sensors
 
@@ -873,6 +886,13 @@ int main(int argc, char* argv[])
   snrAllSensors->GetXaxis()->SetTitle("Bias [V]");
   snrAllSensors->GetYaxis()->SetTitle("SNR");
 
+  for(unsigned int i = 0; i < chargePosSupVec.size(); ++i) // loop on the graphs
+    {
+      chargePosSupVec.at(i)->Draw("AP");
+      chargePosSupVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
+      chargePosSupVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC]");
+    }
+
   for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
     {
       eff95BiasVec.at(i)->Draw("AP");
@@ -1129,6 +1149,20 @@ int main(int argc, char* argv[])
       leg = etaSupVec.at(i)->BuildLegend();
       leg->SetFillColor(kWhite);
       etaSupVec.at(i)->Write();
+    }
+
+  TCanvas* chargePosCan;
+  for(unsigned int i = 0; i < chargePosSupVec.size(); ++i)
+    {
+      sprintf(name, "%s_can", chargePosSupVec.at(i)->GetName());
+      chargePosCan = new TCanvas(name);
+      chargePosCan->SetGridx();
+      chargePosCan->SetGridy();
+      chargePosSupVec.at(i)->Draw("APL");
+      leg = chargePosCan->BuildLegend();
+      leg->SetFillColor(kWhite);
+      chargePosCan->Write();
+      //chargePosSupVec.at(i)->Write();
     }
 
   TCanvas* corrMPVmaxFitAllSenCan = new TCanvas("corrMPVmaxFitAllSenCan");
