@@ -1078,6 +1078,12 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       CDFetaDistrTrackTimeCut->SetBinContent(i, intBin / totArea);
     }
 
+  // profiles of the eta distr
+ TProfile* profileEtaTrack = etaTrackVsPos->ProfileX("profileEtaTrack");
+ profileEtaTrack->SetTitle("Profile of #eta track vs poisition");
+ TProfile* profileEtaClust = etaClustVsPos->ProfileX("profileEtaClust");
+ profileEtaClust->SetTitle("Profile of #eta cluster vs poisition");
+
   // draw graphs to name the axis
   TCanvas* servCan = new TCanvas("servCan");
   servCan->cd();
@@ -1215,6 +1221,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   CDFetaDistrTrackTimeCut->Write();
   etaClustVsPos->Write();
   etaTrackVsPos->Write();
+  profileEtaClust->Write();
+  profileEtaTrack->Write();
 
   TDirectory* noiseDir = outFile->mkdir("noiseChannels");
   noiseDir->cd();
