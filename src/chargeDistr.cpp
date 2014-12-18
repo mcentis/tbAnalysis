@@ -379,7 +379,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 8, 0, 1, 151, -50.5, 511.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 151, -50.5, 511.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
