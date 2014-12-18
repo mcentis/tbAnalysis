@@ -387,7 +387,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   // eta distribution
   minX = -0.5;
   maxX = 1.5;
-  binX = 200;
+  binX = 100;
   TH1D* etaDistrTimeCutDistCut = new TH1D("etaDistrTimeCutDistCut", "#eta distribution in the time cut, dist cut;#eta;Entries", binX, minX, maxX);
   TH1D* CDFetaDistrTimeCutDistCut = new TH1D("CDFetaDistrTimeCutDistCut", "CDF #eta distribution in the time cut, dist cut;#eta;#int #eta", binX, minX, maxX);
   TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", binX, minX, maxX);
