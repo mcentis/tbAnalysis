@@ -425,8 +425,8 @@ int main(int argc, char* argv[])
 		break;
 	      }
 
-	  etaDistr = (TH1*) inFile->Get("etaDistrTimeCutDistCut"); // from the "clusters"
-	  //etaDistr = (TH1*) inFile->Get("etaDistrTrackTimeCut"); // track based
+	  //etaDistr = (TH1*) inFile->Get("etaDistrTimeCutDistCut"); // from the "clusters"
+	  etaDistr = (TH1*) inFile->Get("etaDistrTrackTimeCut"); // track based
 	  etaDistr->Sumw2();
 	  etaDistr->Scale(1 / etaDistr->Integral());
 
