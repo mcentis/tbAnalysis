@@ -70,14 +70,24 @@ int main(int argc, char* argv[])
   std::cout << "If too many sensors appear, have a look for empty lines in the lists" << std::endl;
 
   std::vector<std::string> sensorLabel; // labels for captions
+  bool longLabel = false;
   for(unsigned int i = 0; i < sensorType.size(); ++i)
     {
       if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
-	sensorLabel.push_back("p-bulk, p-stop");
+	{
+	  if(longLabel) sensorLabel.push_back("p-bulk, p-stop");
+	  else sensorLabel.push_back("P");
+	}
       else if(sensorType.at(i)[6] == 'Y' || sensorType.at(i)[6] == 'y')
-	sensorLabel.push_back("p-bulk, p-spray");
+	{
+	  if(longLabel) sensorLabel.push_back("p-bulk, p-spray");
+	  else sensorLabel.push_back("Y");
+	}
       else if(sensorType.at(i)[6] == 'N' || sensorType.at(i)[6] == 'n')
-	sensorLabel.push_back("n-bulk         ");
+	{
+	  if(longLabel) sensorLabel.push_back("n-bulk         ");
+	  else sensorLabel.push_back("N");
+	}
       else
 	sensorLabel.push_back("   no label    ");
     }
@@ -239,7 +249,7 @@ int main(int argc, char* argv[])
 	}
 
       sprintf(name, "mpv_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       mpvGr = new TGraphErrors();
       mpvGr->SetName(name);
       mpvGr->SetTitle(title);
@@ -250,7 +260,7 @@ int main(int argc, char* argv[])
       mpvGr->SetLineStyle(linStyle);
 
       sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       maxFitGr = new TGraphErrors();
       maxFitGr->SetName(name);
       maxFitGr->SetTitle(title);
@@ -261,7 +271,7 @@ int main(int argc, char* argv[])
       maxFitGr->SetLineStyle(linStyle);
 
       sprintf(name, "lanW_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       lanWGr = new TGraphErrors();
       lanWGr->SetName(name);
       lanWGr->SetTitle(title);
@@ -272,7 +282,7 @@ int main(int argc, char* argv[])
       lanWGr->SetLineStyle(linStyle);
 
       sprintf(name, "gSig_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       gSigGr = new TGraphErrors();
       gSigGr->SetName(name);
       gSigGr->SetTitle(title);
@@ -283,7 +293,7 @@ int main(int argc, char* argv[])
       gSigGr->SetLineStyle(linStyle);
 
       sprintf(name, "noise_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       noiseGr = new TGraphErrors();
       noiseGr->SetName(name);
       noiseGr->SetTitle(title);
@@ -294,7 +304,7 @@ int main(int argc, char* argv[])
       noiseGr->SetLineStyle(linStyle);
 
       sprintf(name, "noiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       noiseGroupGr = new TGraphErrors();
       noiseGroupGr->SetName(name);
       noiseGroupGr->SetTitle(title);
@@ -305,7 +315,7 @@ int main(int argc, char* argv[])
       noiseGroupGr->SetLineStyle(linStyle);
 
       sprintf(name, "noisePair_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       noisePairGr = new TGraphErrors();
       noisePairGr->SetName(name);
       noisePairGr->SetTitle(title);
@@ -316,7 +326,7 @@ int main(int argc, char* argv[])
       noisePairGr->SetLineStyle(linStyle);
 
       sprintf(name, "eff95_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       eff95Gr = new TGraphErrors();
       eff95Gr->SetName(name);
       eff95Gr->SetTitle(title);
@@ -327,7 +337,7 @@ int main(int argc, char* argv[])
       eff95Gr->SetLineStyle(linStyle);
 
       sprintf(name, "chargeSharing_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       chargeSharingGr = new TGraphErrors();
       chargeSharingGr->SetName(name);
       chargeSharingGr->SetTitle(title);
@@ -338,7 +348,7 @@ int main(int argc, char* argv[])
       chargeSharingGr->SetLineStyle(linStyle);
 
       sprintf(name, "resY_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       resYGr = new TGraphErrors();
       resYGr->SetName(name);
       resYGr->SetTitle(title);
@@ -349,7 +359,7 @@ int main(int argc, char* argv[])
       resYGr->SetLineStyle(linStyle);
 
       sprintf(name, "chipTemp_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       chipTempGr = new TGraphErrors();
       chipTempGr->SetName(name);
       chipTempGr->SetTitle(title);
@@ -360,19 +370,19 @@ int main(int argc, char* argv[])
       chipTempGr->SetLineStyle(linStyle);
 
       sprintf(name, "histSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "Distributions at different biases %s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "Distributions at different biases %s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       histSupCan = new TCanvas(name, title);
       histSupCan->SetGridx();
       histSupCan->SetGridy();
 
       sprintf(name, "etaSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "#eta distributions at different biases %s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "#eta distributions at different biases %s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       etaSupCan = new TCanvas(name, title);
       etaSupCan->SetGridx();
       etaSupCan->SetGridy();
 
       sprintf(name, "chargePosSup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "Charge vs position at different biases %s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "Charge vs position at different biases %s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       chargePosSup = new TMultiGraph(name, title);
 
       for(unsigned int iRun = 0; iRun < bias.size(); ++iRun) // loop on the runs for a sensor
@@ -525,7 +535,7 @@ int main(int argc, char* argv[])
       //noiseGr = noisePairBiasVec.at(i); // noise on a pair of strips
 
       sprintf(name, "snr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       snrGr = new TGraphErrors();
       snrGr->SetName(name);
       snrGr->SetTitle(title);
@@ -586,7 +596,7 @@ int main(int argc, char* argv[])
       gr2 = maxFitBiasVec.at(i);
 
       sprintf(name, "corrMPVmaxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -616,7 +626,7 @@ int main(int argc, char* argv[])
       gr2 = gSigBiasVec.at(i);
 
       sprintf(name, "corrLanWgausSigFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -646,7 +656,7 @@ int main(int argc, char* argv[])
       gr2 = noiseGroupBiasVec.at(i);
 
       sprintf(name, "corrgSigNoiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       corrGr = new TGraphErrors();
       corrGr->SetName(name);
       corrGr->SetTitle(title);
@@ -705,7 +715,7 @@ int main(int argc, char* argv[])
   for(unsigned int i = 0; i < sensorType.size(); ++i) // loop on the sensors, for correlations
     {
       sprintf(name, "normMpvGr_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
-      sprintf(title, "%s %s %s %.01e n_{eq} cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       normMpvGr = new TGraphErrors();
       normMpvGr->SetName(name);
       normMpvGr->SetTitle(title);
@@ -782,96 +792,107 @@ int main(int argc, char* argv[])
   TCanvas* servCan = new TCanvas();
   servCan->SetName("servCan");
 
+  // limits of the x axis for the graphs with all sensors
+  double xmin = 0;
+  double xmax = 1100;
+
   for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
     {
       mpvBiasVec.at(i)->Draw("AP");
       mpvBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      mpvBiasVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC]");
+      mpvBiasVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC counts]");
 
       mpvAllSensors->Add(mpvBiasVec.at(i));
     }
 
   mpvAllSensors->Draw("AP");
   mpvAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  mpvAllSensors->GetYaxis()->SetTitle("Landau MPV [ADC]");
+  mpvAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  mpvAllSensors->GetYaxis()->SetTitle("Landau MPV [ADC counts]");
 
   for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
     {
       maxFitBiasVec.at(i)->Draw("AP");
       maxFitBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      maxFitBiasVec.at(i)->GetYaxis()->SetTitle("Max of the fit [ADC]");
+      maxFitBiasVec.at(i)->GetYaxis()->SetTitle("Max of the fit [ADC counts]");
 
       maxFitAllSensors->Add(maxFitBiasVec.at(i));
     }
 
   maxFitAllSensors->Draw("AP");
   maxFitAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  maxFitAllSensors->GetYaxis()->SetTitle("Max of the fit [ADC]");
+  maxFitAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  maxFitAllSensors->GetYaxis()->SetTitle("Max of the fit [ADC counts]");
 
   for(unsigned int i = 0; i < lanWBiasVec.size(); ++i) // loop on the graphs
     {
       lanWBiasVec.at(i)->Draw("AP");
       lanWBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      lanWBiasVec.at(i)->GetYaxis()->SetTitle("Landau width [ADC]");
+      lanWBiasVec.at(i)->GetYaxis()->SetTitle("Landau width [ADC counts]");
 
       lanWAllSensors->Add(lanWBiasVec.at(i));
     }
 
   lanWAllSensors->Draw("AP");
   lanWAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  lanWAllSensors->GetYaxis()->SetTitle("Landau width [ADC]");
+  lanWAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  lanWAllSensors->GetYaxis()->SetTitle("Landau width [ADC counts]");
 
   for(unsigned int i = 0; i < gSigBiasVec.size(); ++i) // loop on the graphs
     {
       gSigBiasVec.at(i)->Draw("AP");
       gSigBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      gSigBiasVec.at(i)->GetYaxis()->SetTitle("Gaus #sigma [ADC]");
+      gSigBiasVec.at(i)->GetYaxis()->SetTitle("Gaus #sigma [ADC counts]");
 
       gSigAllSensors->Add(gSigBiasVec.at(i));
     }
 
   gSigAllSensors->Draw("AP");
   gSigAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  gSigAllSensors->GetYaxis()->SetTitle("Gaus #sigma [ADC]");
+  gSigAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  gSigAllSensors->GetYaxis()->SetTitle("Gaus #sigma [ADC counts]");
 
   for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
     {
       noiseBiasVec.at(i)->Draw("AP");
       noiseBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      noiseBiasVec.at(i)->GetYaxis()->SetTitle("Noise [ADC]");
+      noiseBiasVec.at(i)->GetYaxis()->SetTitle("Noise [ADC counts]");
 
       noiseAllSensors->Add(noiseBiasVec.at(i));
     }
 
   noiseAllSensors->Draw("AP");
   noiseAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC]");
+  noiseAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC counts]");
 
   for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
     {
       noiseGroupBiasVec.at(i)->Draw("AP");
       noiseGroupBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      noiseGroupBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+      noiseGroupBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC counts]");
 
       noiseGroupAllSensors->Add(noiseGroupBiasVec.at(i));
     }
 
   noiseGroupAllSensors->Draw("AP");
   noiseGroupAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  noiseGroupAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+  noiseGroupAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  noiseGroupAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC counts]");
 
   for(unsigned int i = 0; i < noisePairBiasVec.size(); ++i) // loop on the graphs
     {
       noisePairBiasVec.at(i)->Draw("AP");
       noisePairBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      noisePairBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+      noisePairBiasVec.at(i)->GetYaxis()->SetTitle("Noise (RMS) [ADC counts]");
 
       noisePairAllSensors->Add(noisePairBiasVec.at(i));
     }
 
   noisePairAllSensors->Draw("AP");
   noisePairAllSensors->GetXaxis()->SetTitle("Bias [V]");
-  noisePairAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC]");
+  noisePairAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  noisePairAllSensors->GetYaxis()->SetTitle("Noise (RMS) [ADC counts]");
 
   for(unsigned int i = 0; i < snrBiasVec.size(); ++i) // loop on the graphs
     {
@@ -884,27 +905,29 @@ int main(int argc, char* argv[])
 
   snrAllSensors->Draw("AP");
   snrAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  snrAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   snrAllSensors->GetYaxis()->SetTitle("SNR");
 
   for(unsigned int i = 0; i < chargePosSupVec.size(); ++i) // loop on the graphs
     {
       chargePosSupVec.at(i)->Draw("AP");
       chargePosSupVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      chargePosSupVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC]");
+      chargePosSupVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC counts]");
     }
 
   for(unsigned int i = 0; i < eff95BiasVec.size(); ++i) // loop on the graphs
     {
       eff95BiasVec.at(i)->Draw("AP");
       eff95BiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [ADC]");
+      eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
 
       eff95AllSensors->Add(eff95BiasVec.at(i));
     }
 
   eff95AllSensors->Draw("AP");
   eff95AllSensors->GetXaxis()->SetTitle("Bias [V]");
-  eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC]");
+  eff95AllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
 
   for(unsigned int i = 0; i < chargeSharingBiasVec.size(); ++i) // loop on the graphs
     {
@@ -917,6 +940,7 @@ int main(int argc, char* argv[])
 
   chargeSharingAllSensors->Draw("AP");
   chargeSharingAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  chargeSharingAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   chargeSharingAllSensors->GetYaxis()->SetTitle("Charge sharing");
 
   for(unsigned int i = 0; i < resYBiasVec.size(); ++i) // loop on the graphs
@@ -930,6 +954,7 @@ int main(int argc, char* argv[])
 
   resYAllSensors->Draw("AP");
   resYAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  resYAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   resYAllSensors->GetYaxis()->SetTitle("#sigma res Y [mm]");
 
   for(unsigned int i = 0; i < chipTempBiasVec.size(); ++i) // loop on the graphs
@@ -943,24 +968,25 @@ int main(int argc, char* argv[])
 
   chipTempAllSensors->Draw("AP");
   chipTempAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  chipTempAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   chipTempAllSensors->GetYaxis()->SetTitle("Temperature [C]");
 
   // correlations graphs
   corrMPVmaxFit->Draw("AP");
-  corrMPVmaxFit->GetXaxis()->SetTitle("Landau MPV [ADC]");
-  corrMPVmaxFit->GetYaxis()->SetTitle("Max fit function [ADC]");
+  corrMPVmaxFit->GetXaxis()->SetTitle("Landau MPV [ADC counts]");
+  corrMPVmaxFit->GetYaxis()->SetTitle("Max fit function [ADC counts]");
 
   corrWidthGsigFit->Draw("AP");
-  corrWidthGsigFit->GetXaxis()->SetTitle("Landau width [ADC]");
-  corrWidthGsigFit->GetYaxis()->SetTitle("G sigma fit function [ADC]");
+  corrWidthGsigFit->GetXaxis()->SetTitle("Landau width [ADC counts]");
+  corrWidthGsigFit->GetYaxis()->SetTitle("G sigma fit function [ADC counts]");
 
   corrNoiseGrGsigFit->Draw("AP");
-  corrNoiseGrGsigFit->GetXaxis()->SetTitle("G sigma fit function [ADC]");
-  corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (RMS) [ADC]");
+  corrNoiseGrGsigFit->GetXaxis()->SetTitle("G sigma fit function [ADC counts]");
+  corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (RMS) [ADC counts]");
 
   normGraph->Draw("AP");
   normGraph->GetXaxis()->SetTitle("Bias [V]");
-  normGraph->GetYaxis()->SetTitle("MPV [ADC]");
+  normGraph->GetYaxis()->SetTitle("MPV [ADC counts]");
 
   normMpvGraph->Draw("AP");
   normMpvGraph->GetXaxis()->SetTitle("Bias [V]");
