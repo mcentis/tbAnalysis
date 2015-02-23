@@ -796,6 +796,11 @@ int main(int argc, char* argv[])
   double xmin = 0;
   double xmax = 1100;
 
+  // test of legend
+  TLegend* legMpv = new TLegend(0.5, 0.5, 0.7, 0.7);
+  legMpv->SetFillColor(kWhite);
+  double prevFlu = -1;
+
   for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
     {
       mpvBiasVec.at(i)->Draw("AP");
@@ -803,6 +808,21 @@ int main(int argc, char* argv[])
       mpvBiasVec.at(i)->GetYaxis()->SetTitle("Landau MPV [ADC counts]");
 
       mpvAllSensors->Add(mpvBiasVec.at(i));
+
+      if(fluences.at(i) != prevFlu)
+	{
+	  // TH1F* labFlu = new TH1F("labFlu","", 10, 0, 1);
+	  // labFlu->SetLineColor(mpvBiasVec.at(i)->GetLineColor());
+	  // labFlu->SetFillColor(mpvBiasVec.at(i)->GetLineColor());
+	  // if(fluences.at(i) == 0) labFlu->SetFillColor(kWhite);
+	  sprintf(title, "%.01e cm^{-2}", fluences.at(i));
+	  // legMpv->AddEntry(labFlu, title);
+	  legMpv->AddEntry((TObject*)0, title, "");
+	  prevFlu = fluences.at(i);
+	}
+
+      sprintf(title, "%s %s %s", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str());
+      legMpv->AddEntry(mpvBiasVec.at(i), title);
     }
 
   mpvAllSensors->Draw("AP");
@@ -994,6 +1014,7 @@ int main(int argc, char* argv[])
 
   delete servCan;
 
+  TLegend* leg;
   outFile->cd();
   // for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
   //   mpvBiasVec.at(i)->Write();
@@ -1001,8 +1022,9 @@ int main(int argc, char* argv[])
 
   TCanvas* mpvAllSenCan = new TCanvas("mpvAllSenCan");
   mpvAllSensors->Draw("APL");
-  TLegend* leg = mpvAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = mpvAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legMpv->Draw(); // different test legend
   mpvAllSenCan->SetGridx();
   mpvAllSenCan->SetGridy();
   mpvAllSenCan->Modified();
