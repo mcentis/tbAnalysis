@@ -4,6 +4,7 @@
 #include "math.h"
 
 #include "TStyle.h"
+#include "TPaveText.h"
 #include "TFile.h"
 #include "TH1.h"
 #include "TGraphErrors.h"
@@ -31,7 +32,7 @@ int main(int argc, char* argv[])
   gStyle->SetTitleOffset(0.95, "y");
 
   gStyle->SetMarkerSize(2);
-  gStyle->SetLineWidth(1);
+  // gStyle->SetLineWidth(1);
 
   char fileName[200];
   sprintf(fileName, "%s/mergedData.root", argv[2]);
@@ -159,7 +160,8 @@ int main(int argc, char* argv[])
 
   char name[200];
   char title[500];
-  int linStyle = 0;
+  int linStyle = 1;
+  int linWidth = 1;
   int iColor = 0; // color of the graphs
   int mrkStyle = 0; // marker style
   int iColSuper = 0; // color for superimpositions
@@ -202,24 +204,12 @@ int main(int argc, char* argv[])
       // if(iColor >= 5) ++iColor; // skip yellow
       // if(iColor - 1 == 0) linStyle++;
 
-      // the symbol represents the sensor type: n, y, p
-      if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
-	mrkStyle = 20;
-      else if(sensorType.at(i)[6] == 'Y' || sensorType.at(i)[6] == 'y')
-	mrkStyle = 21;
-      else if(sensorType.at(i)[6] == 'N' || sensorType.at(i)[6] == 'n')
-	mrkStyle = 22;
-      else
-	{
-	  mrkStyle = 27;
-	  std::cout << "-------------------------------------------------------------------- Sensor type not recognized for " << sensorType.at(i) << std::endl;
-	}
-
+      linStyle = 1;
       // the color will represent the irradiation
       if(fluences.at(i) == 0)
 	{
 	  iColor = kRed;
-	  mrkStyle += 4; // open symbols for the non irradiated devices (works if NPY was recognized...)
+	  linStyle = 2; // dotted line for 0 fluence
 	}
       else if(fluences.at(i) == 1.e15)
 	iColor = kGreen;// in case it is too bright use 8
@@ -235,18 +225,48 @@ int main(int argc, char* argv[])
 	  std::cout << "-------------------------------------------------------------------- Fluence not recognized for " << sensorType.at(i) << std::endl;
 	}
 
-      // the line represents the material
+      // the symbol represents the material
       if(sensorMaterial.at(i) == "Epi" || sensorMaterial.at(i) == "epi")
-	linStyle = 9;
+	{
+	  mrkStyle = 20;
+	  linWidth = 1;
+	}
       else if(sensorMaterial.at(i) == "Mcz" || sensorMaterial.at(i) == "mcz")
-	linStyle = 2;
+	{
+	  mrkStyle = 22;
+	  linWidth = 2;
+	}
       else if(sensorMaterial.at(i) == "Fth" || sensorMaterial.at(i) == "fth")
-	linStyle = 10;
+	{
+	  mrkStyle = 21;
+	  linWidth = 2;
+	}
       else
 	{
-	  linStyle = 1;
+	  mrkStyle = 3;
 	  std::cout << "-------------------------------------------------------------------- Material not recognized for " << sensorType.at(i) << std::endl;
 	}
+
+      // open symbols for p-stop, full for p-spray, full for n type
+      if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
+	mrkStyle += 4;
+      else if(sensorType.at(i)[6] != 'Y' && sensorType.at(i)[6] != 'y' && sensorType.at(i)[6] != 'N' && sensorType.at(i)[6] != 'n')
+	{
+	  mrkStyle = 27;
+	  std::cout << "-------------------------------------------------------------------- Sensor type not recognized for " << sensorType.at(i) << std::endl;
+	}
+
+      // if(sensorType.at(i)[6] == 'P' || sensorType.at(i)[6] == 'p')
+      // 	; // do nothing
+      // else if(sensorType.at(i)[6] == 'Y' || sensorType.at(i)[6] == 'y')
+      // 	mrkStyle += 4;
+      // else if(sensorType.at(i)[6] == 'N' || sensorType.at(i)[6] == 'n')
+      // 	mrkStyle = 29;
+      // else
+      // 	{
+      // 	  mrkStyle = 27;
+      // 	  std::cout << "-------------------------------------------------------------------- Sensor type not recognized for " << sensorType.at(i) << std::endl;
+      // 	}
 
       sprintf(name, "mpv_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
@@ -256,6 +276,7 @@ int main(int argc, char* argv[])
       mpvGr->SetMarkerStyle(mrkStyle);
       mpvGr->SetFillColor(kWhite);
       mpvGr->SetLineColor(iColor); // set line color and style
+      mpvGr->SetLineWidth(linWidth);
       mpvGr->SetMarkerColor(iColor);
       mpvGr->SetLineStyle(linStyle);
 
@@ -267,6 +288,7 @@ int main(int argc, char* argv[])
       maxFitGr->SetMarkerStyle(mrkStyle);
       maxFitGr->SetFillColor(kWhite);
       maxFitGr->SetLineColor(iColor); // set line color and style
+      maxFitGr->SetLineWidth(linWidth);
       maxFitGr->SetMarkerColor(iColor);
       maxFitGr->SetLineStyle(linStyle);
 
@@ -278,6 +300,7 @@ int main(int argc, char* argv[])
       lanWGr->SetMarkerStyle(mrkStyle);
       lanWGr->SetFillColor(kWhite);
       lanWGr->SetLineColor(iColor); // set line color and style
+      lanWGr->SetLineWidth(linWidth);
       lanWGr->SetMarkerColor(iColor);
       lanWGr->SetLineStyle(linStyle);
 
@@ -289,6 +312,7 @@ int main(int argc, char* argv[])
       gSigGr->SetMarkerStyle(mrkStyle);
       gSigGr->SetFillColor(kWhite);
       gSigGr->SetLineColor(iColor); // set line color and style
+      gSigGr->SetLineWidth(linWidth);
       gSigGr->SetMarkerColor(iColor);
       gSigGr->SetLineStyle(linStyle);
 
@@ -300,6 +324,7 @@ int main(int argc, char* argv[])
       noiseGr->SetMarkerStyle(mrkStyle);
       noiseGr->SetFillColor(kWhite);
       noiseGr->SetLineColor(iColor); // set line color and style
+      noiseGr->SetLineWidth(linWidth);
       noiseGr->SetMarkerColor(iColor);
       noiseGr->SetLineStyle(linStyle);
 
@@ -311,6 +336,7 @@ int main(int argc, char* argv[])
       noiseGroupGr->SetMarkerStyle(mrkStyle);
       noiseGroupGr->SetFillColor(kWhite);
       noiseGroupGr->SetLineColor(iColor); // set line color and style
+      noiseGroupGr->SetLineWidth(linWidth);
       noiseGroupGr->SetMarkerColor(iColor);
       noiseGroupGr->SetLineStyle(linStyle);
 
@@ -322,6 +348,7 @@ int main(int argc, char* argv[])
       noisePairGr->SetMarkerStyle(mrkStyle);
       noisePairGr->SetFillColor(kWhite);
       noisePairGr->SetLineColor(iColor); // set line color and style
+      noisePairGr->SetLineWidth(linWidth);
       noisePairGr->SetMarkerColor(iColor);
       noisePairGr->SetLineStyle(linStyle);
 
@@ -333,6 +360,7 @@ int main(int argc, char* argv[])
       eff95Gr->SetMarkerStyle(mrkStyle);
       eff95Gr->SetFillColor(kWhite);
       eff95Gr->SetLineColor(iColor); // set line color and style
+      eff95Gr->SetLineWidth(linWidth);
       eff95Gr->SetMarkerColor(iColor);
       eff95Gr->SetLineStyle(linStyle);
 
@@ -344,6 +372,7 @@ int main(int argc, char* argv[])
       chargeSharingGr->SetMarkerStyle(mrkStyle);
       chargeSharingGr->SetFillColor(kWhite);
       chargeSharingGr->SetLineColor(iColor); // set line color and style
+      chargeSharingGr->SetLineWidth(linWidth);
       chargeSharingGr->SetMarkerColor(iColor);
       chargeSharingGr->SetLineStyle(linStyle);
 
@@ -355,6 +384,7 @@ int main(int argc, char* argv[])
       resYGr->SetMarkerStyle(mrkStyle);
       resYGr->SetFillColor(kWhite);
       resYGr->SetLineColor(iColor); // set line color and style
+      resYGr->SetLineWidth(linWidth);
       resYGr->SetMarkerColor(iColor);
       resYGr->SetLineStyle(linStyle);
 
@@ -366,6 +396,7 @@ int main(int argc, char* argv[])
       chipTempGr->SetMarkerStyle(mrkStyle);
       chipTempGr->SetFillColor(kWhite);
       chipTempGr->SetLineColor(iColor); // set line color and style
+      chipTempGr->SetLineWidth(linWidth);
       chipTempGr->SetMarkerColor(iColor);
       chipTempGr->SetLineStyle(linStyle);
 
@@ -542,6 +573,7 @@ int main(int argc, char* argv[])
       snrGr->SetMarkerStyle(mpvGr->GetMarkerStyle());
       snrGr->SetFillColor(kWhite);
       snrGr->SetLineColor(mpvGr->GetLineColor()); // set line color and style
+      snrGr->SetLineWidth(linWidth);
       snrGr->SetMarkerColor(mpvGr->GetMarkerColor());
       snrGr->SetLineStyle(mpvGr->GetLineStyle());
       snrGr->SetLineWidth(2);
@@ -603,6 +635,7 @@ int main(int argc, char* argv[])
       corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
       corrGr->SetFillColor(kWhite);
       corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetLineWidth(gr1->GetLineWidth());
       corrGr->SetMarkerColor(gr1->GetMarkerColor());
       corrGr->SetLineStyle(gr1->GetLineStyle());
       //corrGr->SetLineWidth(2);
@@ -633,6 +666,7 @@ int main(int argc, char* argv[])
       corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
       corrGr->SetFillColor(kWhite);
       corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetLineWidth(gr1->GetLineWidth());
       corrGr->SetMarkerColor(gr1->GetMarkerColor());
       corrGr->SetLineStyle(gr1->GetLineStyle());
       //corrGr->SetLineWidth(2);
@@ -663,6 +697,7 @@ int main(int argc, char* argv[])
       corrGr->SetMarkerStyle(gr1->GetMarkerStyle());
       corrGr->SetFillColor(kWhite);
       corrGr->SetLineColor(gr1->GetLineColor()); // set line color and style
+      corrGr->SetLineWidth(gr1->GetLineWidth());
       corrGr->SetMarkerColor(gr1->GetMarkerColor());
       corrGr->SetLineStyle(gr1->GetLineStyle());
       //corrGr->SetLineWidth(2);
@@ -722,6 +757,7 @@ int main(int argc, char* argv[])
       normMpvGr->SetMarkerStyle(mpvBiasVec.at(i)->GetMarkerStyle());
       normMpvGr->SetFillColor(kWhite);
       normMpvGr->SetLineColor(mpvBiasVec.at(i)->GetLineColor()); // set line color and style
+      normMpvGr->SetLineWidth(mpvBiasVec.at(i)->GetLineWidth());
       normMpvGr->SetMarkerColor(mpvBiasVec.at(i)->GetMarkerColor());
       normMpvGr->SetLineStyle(mpvBiasVec.at(i)->GetLineStyle());
 
@@ -1019,12 +1055,64 @@ int main(int argc, char* argv[])
   // for(unsigned int i = 0; i < mpvBiasVec.size(); ++i) // loop on the graphs
   //   mpvBiasVec.at(i)->Write();
   mpvAllSensors->Write();
+/*
+  // build test legend
+  TLegend* testLeg = new TLegend(0.7, 0.15, 0.9, 0.6);
+  testLeg->SetLineColor(kWhite);
+  testLeg->SetFillColor(kWhite);
+  TH1I* h1 = new TH1I(); h1->SetLineColor(kBlue); h1->SetFillColor(kBlue);
+  testLeg->AddEntry(h1, "Epi 100 #mum");
+  TH1I* h2 = new TH1I(); h2->SetLineColor(kRed); h2->SetFillColor(kRed);
+  testLeg->AddEntry(h2, "MCZ 200 #mum");
+  TH1I* h3 = new TH1I(); h3->SetLineColor(kBlack); h3->SetFillColor(kBlack);
+  testLeg->AddEntry(h3, "FTH 200 #mum");
+  testLeg->AddEntry((TObject*) NULL, "P-stop open symbols", "");
+  testLeg->AddEntry((TObject*) NULL, "P-spray full symbols", "");
+
+  // build legend for the fluences
+  TLegend* lineLeg = new TLegend(0.3, 0.15, 0.5, 0.6);
+  lineLeg->SetFillColor(kWhite);
+  lineLeg->SetLineColor(kWhite);
+  TGraph* a = new TGraph(); a->SetLineStyle(0);
+  TGraph* b = new TGraph(); b->SetLineStyle(9);
+  TGraph* c = new TGraph(); c->SetLineStyle(2);
+  lineLeg->AddEntry(a, "0 cm^{-2}", "L");
+  lineLeg->AddEntry(b, "1e15 cm^{-2}", "L");
+  lineLeg->AddEntry(c, "1.5e15 cm^{-2}", "L");
+  lineLeg->AddEntry(a, "3e15 cm^{-2}", "L");
+  lineLeg->AddEntry(b, "1.3e16 cm^{-2}", "L");
+*/
+  // next legend attempt
+  TLegend* legend = new TLegend(0.77, 0.21, 1, 0.8);
+  legend->SetLineColor(kWhite);
+  legend->SetFillColor(kWhite);
+  TGraph* epiLeg = new TGraph(); epiLeg->SetMarkerStyle(20); epiLeg->SetMarkerSize(2); epiLeg->SetLineWidth(1);
+  legend->AddEntry(epiLeg, "Epi 100 #mum", "PL");
+  TGraph* mczLeg = new TGraph(); mczLeg->SetMarkerStyle(22); mczLeg->SetMarkerSize(2); mczLeg->SetLineWidth(2);
+  legend->AddEntry(mczLeg, "MCz 200 #mum", "PL");
+  TGraph* fthLeg = new TGraph(); fthLeg->SetMarkerStyle(21); fthLeg->SetMarkerSize(2); fthLeg->SetLineWidth(2);
+  legend->AddEntry(fthLeg, "Fth 200 #mum", "PL");
+  legend->AddEntry((TObject*) NULL, "P-stop open symbols", "");
+  legend->AddEntry((TObject*) NULL, "P-spray full symbols", "");
+  TGraph* f0 = new TGraph(); f0->SetLineColor(kRed); f0->SetLineStyle(2);
+  legend->AddEntry(f0, "0 cm^{-2}", "L");
+  TGraph* f1e15 = new TGraph(); f1e15->SetLineColor(kGreen);
+  legend->AddEntry(f1e15, "1 10^{15} cm^{-2}", "L");
+  TGraph* f15e14 = new TGraph(); f15e14->SetLineColor(kBlack);
+  legend->AddEntry(f15e14, "1.5 10^{15} cm^{-2}", "L");
+  TGraph* f3e15 = new TGraph(); f3e15->SetLineColor(kBlue);
+  legend->AddEntry(f3e15, "3 10^{15} cm^{-2}", "L");
+  TGraph* f13e15 = new TGraph(); f13e15->SetLineColor(kRed);
+  legend->AddEntry(f13e15, "1.3 10^{16} cm^{-2}", "L");
 
   TCanvas* mpvAllSenCan = new TCanvas("mpvAllSenCan");
   mpvAllSensors->Draw("APL");
   // leg = mpvAllSenCan->BuildLegend();
   // leg->SetFillColor(kWhite);
-  legMpv->Draw(); // different test legend
+  // legMpv->Draw(); // different test legend
+  // testLeg->Draw(); // different test legend
+  // lineLeg->Draw(); // different test legend
+  legend->Draw();
   mpvAllSenCan->SetGridx();
   mpvAllSenCan->SetGridy();
   mpvAllSenCan->Modified();
@@ -1037,8 +1125,9 @@ int main(int argc, char* argv[])
 
   TCanvas* maxFitAllSenCan = new TCanvas("maxFitAllSenCan");
   maxFitAllSensors->Draw("APL");
-  leg = maxFitAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = maxFitAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   maxFitAllSenCan->SetGridx();
   maxFitAllSenCan->SetGridy();
   maxFitAllSenCan->Modified();
@@ -1051,8 +1140,9 @@ int main(int argc, char* argv[])
 
   TCanvas* lanWAllSenCan = new TCanvas("lanWAllSenCan");
   lanWAllSensors->Draw("APL");
-  leg = lanWAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = lanWAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   lanWAllSenCan->SetGridx();
   lanWAllSenCan->SetGridy();
   lanWAllSenCan->Modified();
@@ -1065,8 +1155,9 @@ int main(int argc, char* argv[])
 
   TCanvas* gSigAllSenCan = new TCanvas("gSigAllSenCan");
   gSigAllSensors->Draw("APL");
-  leg = gSigAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = gSigAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   gSigAllSenCan->SetGridx();
   gSigAllSenCan->SetGridy();
   gSigAllSenCan->Modified();
@@ -1079,8 +1170,9 @@ int main(int argc, char* argv[])
 
   TCanvas* noiseAllSenCan = new TCanvas("noiseAllSenCan");
   noiseAllSensors->Draw("APL");
-  leg = noiseAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = noiseAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   noiseAllSenCan->SetGridx();
   noiseAllSenCan->SetGridy();
   noiseAllSenCan->Modified();
@@ -1093,8 +1185,9 @@ int main(int argc, char* argv[])
 
   TCanvas* noiseGroupAllSenCan = new TCanvas("noiseGroupAllSenCan");
   noiseGroupAllSensors->Draw("APL");
-  leg = noiseGroupAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = noiseGroupAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   noiseGroupAllSenCan->SetGridx();
   noiseGroupAllSenCan->SetGridy();
   noiseGroupAllSenCan->Modified();
@@ -1107,8 +1200,9 @@ int main(int argc, char* argv[])
 
   TCanvas* noisePairAllSenCan = new TCanvas("noisePairAllSenCan");
   noisePairAllSensors->Draw("APL");
-  leg = noisePairAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = noisePairAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   noisePairAllSenCan->SetGridx();
   noisePairAllSenCan->SetGridy();
   noisePairAllSenCan->Modified();
@@ -1121,8 +1215,9 @@ int main(int argc, char* argv[])
 
   TCanvas* snrAllSenCan = new TCanvas("snrAllSenCan");
   snrAllSensors->Draw("APL");
-  leg = snrAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = snrAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   snrAllSenCan->SetGridx();
   snrAllSenCan->SetGridy();
   snrAllSenCan->Modified();
@@ -1135,8 +1230,9 @@ int main(int argc, char* argv[])
 
   TCanvas* eff95AllSenCan = new TCanvas("eff95AllSenCan");
   eff95AllSensors->Draw("APL");
-  leg = eff95AllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = eff95AllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   eff95AllSenCan->SetGridx();
   eff95AllSenCan->SetGridy();
   eff95AllSenCan->Modified();
@@ -1149,8 +1245,9 @@ int main(int argc, char* argv[])
 
   TCanvas* chargeSharingAllSenCan = new TCanvas("chargeSharingAllSenCan");
   chargeSharingAllSensors->Draw("APL");
-  leg = chargeSharingAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = chargeSharingAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   chargeSharingAllSenCan->SetGridx();
   chargeSharingAllSenCan->SetGridy();
   chargeSharingAllSenCan->Modified();
@@ -1163,8 +1260,9 @@ int main(int argc, char* argv[])
 
   TCanvas* resYAllSenCan = new TCanvas("resYAllSenCan");
   resYAllSensors->Draw("APL");
-  leg = resYAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = resYAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   resYAllSenCan->SetGridx();
   resYAllSenCan->SetGridy();
   resYAllSenCan->Modified();
@@ -1177,8 +1275,9 @@ int main(int argc, char* argv[])
 
   TCanvas* chipTempAllSenCan = new TCanvas("chipTempAllSenCan");
   chipTempAllSensors->Draw("APL");
-  leg = chipTempAllSenCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = chipTempAllSenCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   chipTempAllSenCan->SetGridx();
   chipTempAllSenCan->SetGridy();
   chipTempAllSenCan->Modified();
