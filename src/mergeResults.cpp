@@ -1347,8 +1347,9 @@ int main(int argc, char* argv[])
 
   TCanvas* normMpvGraphCan = new TCanvas("normMpvGraphCan");
   normMpvGraph->Draw("APL");
-  leg = normMpvGraphCan->BuildLegend();
-  leg->SetFillColor(kWhite);
+  // leg = normMpvGraphCan->BuildLegend();
+  // leg->SetFillColor(kWhite);
+  legend->Draw();
   normMpvGraphCan->SetGridx();
   normMpvGraphCan->SetGridy();
   normMpvGraphCan->Modified();
