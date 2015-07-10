@@ -15,7 +15,7 @@ runInfo = []
 
 thickness = 100. # [um]
 errThick = 1. # [um]
-errAngle = radians(0.1) # [rad]
+errAngle = radians(1.) # [rad]
 ionizationMPV = 79. # e-h pairs / um [um-1]
 
 with open(sys.argv[1], 'r') as runInfoFile:
@@ -45,6 +45,7 @@ calGr = TGraphErrors()
 calGr.SetName('calGr')
 
 for run in runInfo:
+    print run
     fileName = sys.argv[2] + '/' + run[-1] + '.root'
     #print fileName
     inFile = TFile.Open(fileName)
@@ -55,17 +56,21 @@ for run in runInfo:
     #li.Print()
     func = li[0]#hist.GetFunction('gausLang')
     #print func
-    #print '%f +- %f' %(func.GetParameter(4), func.GetParError(4))
+    print '\tMPV: %f +- %f\n' %(func.GetParameter(4), func.GetParError(4))
     angle = radians(float(run[2]))
     effThick = thickness / cos(angle)
-    effThickErr = sqrt(pow(tan(angle) * errAngle, 2) + pow(errThick / thickness, 2))
+    effThickErr = effThick * sqrt(pow(tan(angle) * errAngle, 2) + pow(errThick / thickness, 2))
     nPoint = calGr.GetN()
     calGr.SetPoint(nPoint, func.GetParameter(4), ionizationMPV * effThick)
     calGr.SetPointError(nPoint, func.GetParError(4), ionizationMPV * effThickErr)
 
+calFunc = TF1('calFunc', '[0] * x', 0, 100)
 
 calCan = TCanvas('calCan', 'calCan')
 calGr.Draw('ap')
+calGr.Fit(calFunc, 'r')
+calGr.GetXaxis().SetLimits(0, 100)
+calGr.GetYaxis().SetRangeUser(0, 15000)
 calGr.GetXaxis().SetTitle('Landau MPV [ADC]')
 calGr.GetYaxis().SetTitle('Expected ionization')
 
