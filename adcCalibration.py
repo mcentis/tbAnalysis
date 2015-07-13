@@ -17,6 +17,7 @@ thickness = 100. # [um]
 errThick = 1. # [um]
 errAngle = radians(1.) # [rad]
 ionizationMPV = 79. # e-h pairs / um [um-1]
+ionizationMean = 98. # e-h pairs / um [um-1]
 
 with open(sys.argv[1], 'r') as runInfoFile:
     for line in runInfoFile:
@@ -41,8 +42,19 @@ with open(sys.argv[1], 'r') as runInfoFile:
 
 #     print 'max range %d\tentries %f\tmean %f' %(a, hist.GetEntries(), hist.GetMean())
 
-calGr = TGraphErrors()
-calGr.SetName('calGr')
+calGrMPV = TGraphErrors()
+calGrMPV.SetName('calGrMPV')
+calGrMPV.SetTitle('Landau MPV')
+calGrMPV.SetFillColor(kWhite)
+calGrMPV.SetLineColor(kRed)
+calGrMPV.SetMarkerColor(kRed)
+
+calGrMean = TGraphErrors()
+calGrMean.SetName('calGrMean')
+calGrMean.SetName('Mean')
+calGrMean.SetFillColor(kWhite)
+calGrMean.SetLineColor(kBlue)
+calGrMean.SetMarkerColor(kBlue)
 
 for run in runInfo:
     print run
@@ -56,22 +68,55 @@ for run in runInfo:
     #li.Print()
     func = li[0]#hist.GetFunction('gausLang')
     #print func
-    print '\tMPV: %f +- %f\n' %(func.GetParameter(4), func.GetParError(4))
+    print '\tMPV: %f +- %f' %(func.GetParameter(4), func.GetParError(4))
     angle = radians(float(run[2]))
     effThick = thickness / cos(angle)
     effThickErr = effThick * sqrt(pow(tan(angle) * errAngle, 2) + pow(errThick / thickness, 2))
-    nPoint = calGr.GetN()
-    calGr.SetPoint(nPoint, func.GetParameter(4), ionizationMPV * effThick)
-    calGr.SetPointError(nPoint, func.GetParError(4), ionizationMPV * effThickErr)
+    nPoint = calGrMPV.GetN()
+    calGrMPV.SetPoint(nPoint, func.GetParameter(4), ionizationMPV * effThick)
+    calGrMPV.SetPointError(nPoint, func.GetParError(4), ionizationMPV * effThickErr)
 
-calFunc = TF1('calFunc', '[0] * x', 0, 100)
+    hist = inFile.Get('signalDistrTimeCutDistCut_noisePeakSub')
+    calGrMean.SetPoint(nPoint, hist.GetMean(), ionizationMean * effThick)
+    calGrMean.SetPointError(nPoint, hist.GetMeanError(), ionizationMean * effThickErr)
+    print '\tMean: %f +- %f\n' %(hist.GetMean(), hist.GetMeanError())
+
+calFuncMPV = TF1('calFuncMPV', '[0] * x', 0, 100)
+
+calCanMPV = TCanvas('calCanMPV', 'calCanMPV')
+calGrMPV.Draw('ap')
+#calGrMPV.Fit(calFuncMPV, 'r')
+calGrMPV.GetXaxis().SetLimits(0, 100)
+calGrMPV.GetYaxis().SetRangeUser(0, 15000)
+calGrMPV.GetXaxis().SetTitle('Landau MPV [ADC]')
+calGrMPV.GetYaxis().SetTitle('Expected ionization')
+
+calFuncMean = TF1('calFuncMean', '[0] * x', 0, 200)
+
+calCanMean = TCanvas('calCanMean', 'calCanMean')
+calGrMean.Draw('ap')
+#calGrMean.Fit(calFuncMean, 'r')
+calGrMean.GetXaxis().SetLimits(0, 200)
+calGrMean.GetYaxis().SetRangeUser(0, 25000)
+calGrMean.GetXaxis().SetTitle('Landau Mean [ADC]')
+calGrMean.GetYaxis().SetTitle('Expected ionization')
+
+calGr = TMultiGraph()
+calGr.Add(calGrMPV)
+calGr.Add(calGrMean)
+
+calFunc = TF1('calFuncMean', '[0] * x', 0, 200)
+#calFunc = TF1('calFuncMean', 'pol1', 0, 200)
 
 calCan = TCanvas('calCan', 'calCan')
 calGr.Draw('ap')
 calGr.Fit(calFunc, 'r')
-calGr.GetXaxis().SetLimits(0, 100)
-calGr.GetYaxis().SetRangeUser(0, 15000)
-calGr.GetXaxis().SetTitle('Landau MPV [ADC]')
+calGr.GetXaxis().SetLimits(0, 110)
+calGr.GetYaxis().SetRangeUser(0, 17000)
+calGr.GetXaxis().SetTitle('Measured ionization [ADC]')
 calGr.GetYaxis().SetTitle('Expected ionization')
+calCan.BuildLegend()
+calCan.Modified()
+calCan.Update()
 
 raw_input('...')
