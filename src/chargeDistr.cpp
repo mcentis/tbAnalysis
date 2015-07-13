@@ -984,7 +984,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   for(int iBin = 1; iBin < signalDistrTimeCutDistCut->GetNbinsX(); iBin++) // under flow and over flow bins not considered
     {
       cont = signalDistrTimeCutDistCut->GetBinContent(iBin) - noiseGaus->Eval(signalDistrTimeCutDistCut->GetBinCenter(iBin));
-      //if(cont < 0) cont = 0;
+      if(cont < 0) cont = 0; // avoid to go negative
       signalDistrTimeCutDistCut_noisePeakSub->SetBinContent(iBin, cont);
     }
 

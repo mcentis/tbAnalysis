@@ -19,6 +19,7 @@ do
 	do
 	    iConf=$(ls -d $iBias/*.cfg)
 	    #xterm -e "cd $PWD; pwd; ./executables/chargeDistr $iRun $iConf" &
+	    echo $iRun
 	    ./executables/chargeDistr $iRun $iConf & # to not have new windows opening
 	    let jobCount+=1 #increment job coutner
 #echo "======================================================================bla $iRun $iConf"
