@@ -18,7 +18,8 @@ do
 	for iRun in $(ls -d $iBias/*.root)
 	do
 	    iConf=$(ls -d $iBias/*.cfg)
-	    xterm -e "cd $PWD; pwd; ./executables/chargeDistr $iRun $iConf" &
+	    #xterm -e "cd $PWD; pwd; ./executables/chargeDistr $iRun $iConf" &
+	    ./executables/chargeDistr $iRun $iConf & # to not have new windows opening
 	    let jobCount+=1 #increment job coutner
 #echo "======================================================================bla $iRun $iConf"
 	    if [ $jobCount -eq $maxjobs ] #if the number of submitted jobs is equal to the maximum, wait for the last of them to finish

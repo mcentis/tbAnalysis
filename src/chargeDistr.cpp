@@ -333,6 +333,10 @@ int main(int argc, char* argv[])
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   //  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 300, -50.5, 511.5);
+  TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
+  signalDistrTimeCutDistCut_noisePeakSub->SetName("signalDistrTimeCutDistCut_noisePeakSub");
+  signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal[ADC];Entries");
+  //TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D("signalDistrTimeCutDistCut_noisePeakSub", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal[ADC];Entries", 300, -50.5, 511.5);
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
 TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
 
@@ -847,8 +851,8 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   fitResiduals(residualsY, -0.25, 0.25);
   fitResiduals(residualsYselected, -0.15, 0.15);
 
-  gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
-             		noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+  TF1* lanGausFitFunc = gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
+						noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
@@ -971,6 +975,19 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
   delete fitCan;
 
+  // noise peak subtraction for the histo of charge
+  TF1* noiseGaus = new TF1("noiseGaus", "gaus", signalDistrTimeCutDistCut->GetXaxis()->GetXmin(), signalDistrTimeCutDistCut->GetXaxis()->GetXmax());
+  noiseGaus->SetParameter(0, lanGausFitFunc->GetParameter(0));
+  noiseGaus->SetParameter(1, lanGausFitFunc->GetParameter(1));
+  noiseGaus->SetParameter(2, lanGausFitFunc->GetParameter(2));
+  double cont;
+  for(int iBin = 1; iBin < signalDistrTimeCutDistCut->GetNbinsX(); iBin++) // under flow and over flow bins not considered
+    {
+      cont = signalDistrTimeCutDistCut->GetBinContent(iBin) - noiseGaus->Eval(signalDistrTimeCutDistCut->GetBinCenter(iBin));
+      //if(cont < 0) cont = 0;
+      signalDistrTimeCutDistCut_noisePeakSub->SetBinContent(iBin, cont);
+    }
+
   double chargeSum;
   int nTracks;
   for(int iBinX = 1; iBinX < chargeMapMod160->GetNbinsX(); ++iBinX) // normalize charge map in the time cut
@@ -981,7 +998,6 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
 	if(nTracks != 0)
 	  chargeMapMod160Normalized->SetBinContent(iBinX, iBinY, chargeSum / nTracks);
-
       }
 
   TH1D* chargeMapMod160NormProjX = chargeMapMod160Normalized->ProjectionX("chargeMapMod160NormProjX"); // projections in x and y
@@ -1182,6 +1198,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   noiseDistrPair->Write();
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
+  signalDistrTimeCutDistCut_noisePeakSub->Write();
   signalDistrTimeDistHPHcut->Write();
   noiseDistrTimeCut->Write();
   backgroundDistrHPH->Write();
