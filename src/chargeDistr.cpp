@@ -185,6 +185,8 @@ int main(int argc, char* argv[])
 
   std::vector<int> goodChVec = readGoodChFile(conf->GetValue("goodChFile").c_str()); // good channels
 
+  double ADCtoe = atof(conf->GetValue("ADCtoe").c_str()); // parameter to apply conversion of ADC to e-
+
   double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
   double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
   double tCorr_p2 = atof(conf->GetValue("tCorr_p2").c_str());
@@ -329,16 +331,17 @@ int main(int argc, char* argv[])
   TH1D* noiseDistr = new TH1D("noiseDistr", "Signal distribution (positivized) not associated with a hit;Signal [ADC];Entries", 201, -100.5, 100.5);
   sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [ADC];Entries", maxDist * 2 + 1);
   TH1D* noiseDistrGroup = new TH1D("noiseDistrGroup", title, 201, -100.5, 100.5);
+  sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [e^{-}];Entries", maxDist * 2 + 1);
+  TH1D* noiseDistrGroup_electrons = new TH1D("noiseDistrGroup_electrons", title, 201, -100.5 * ADCtoe, 100.5 * ADCtoe);
   TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
-  //  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
-  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 300, -50.5, 511.5);
+  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 300, -50.5, 511.5);
+  TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 300, -50.5 * ADCtoe, 511.5 * ADCtoe);
   TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
   signalDistrTimeCutDistCut_noisePeakSub->SetName("signalDistrTimeCutDistCut_noisePeakSub");
-  signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal[ADC];Entries");
-  //TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D("signalDistrTimeCutDistCut_noisePeakSub", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal[ADC];Entries", 300, -50.5, 511.5);
+  signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [ADC];Entries");
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
-TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
+  TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
 
   // signal on the strip with highest ph
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 562, -50.5, 511.5);
@@ -359,6 +362,9 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   tempEvt->SetTitle("Tempetrature of the beetle chip vs event number");
 
   TH1D* tempDistr = new TH1D("tempDistr", "Temperature of the beetle chip;Temperature [C];Events", 600, 0, 30);
+
+  // temperature correction
+  TH1D* scaleFactorDistr = new TH1D("scaleFactorDistr", "Factor for temperature correction;Factor;Entries", 4000, 0, 2);
 
   // three histos to get a map of charge collection over 2 strips in the time cut, distance cut
   double minX = -20000;
@@ -550,6 +556,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		  if(summed == maxDist * 2 + 1)
 		    {
 		      noiseDistrGroup->Fill(noiseSum * polarity);
+		      noiseDistrGroup_electrons->Fill(noiseSum * polarity * ADCtoe);
 		      backgroundDistrHPH->Fill(noiseHPH);
 		      summed = 0;
 		      noiseSum = 0;
@@ -676,6 +683,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		  //if(hiChargeCh == highestPHstrip) // the strip with the highest PH is the hit one
 		    {
 		      signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
+		      signalDistrTimeCutDistCut_electrons->Fill(highestCharge * polarity * ADCtoe);
 		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
 		      correlationPHstripHPHhit->Fill(highestCharge * polarity, phHighestStrip);
 
@@ -761,6 +769,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 		} // time cut
 	      tempEvt->SetPoint(tempEvt->GetN(), evtMrk, evtAliTemp);
 	      tempDistr->Fill(evtAliTemp);
+	      scaleFactorDistr->Fill(scaleFactor);
 	    } // the analysis of the event should be contained in this scope
 
 	  // set the counters
@@ -853,6 +862,9 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
 
   TF1* lanGausFitFunc = gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
 						noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+
+  /*TF1* lanGausFitFunc_electrons = */gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut_electrons, negSigmaFit, posSigmaFit,
+							     noiseDistrGroup_electrons->GetMean(), noiseDistrGroup_electrons->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
   //lanGausFit(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit);
@@ -973,8 +985,6 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   // fit_bg->FixParameter(0, fitSig);
   stripHPHDistrTimeCutDistCut->Fit(fit_bg, "RQ");
 
-  delete fitCan;
-
   // noise peak subtraction for the histo of charge
   TF1* noiseGaus = new TF1("noiseGaus", "gaus", signalDistrTimeCutDistCut->GetXaxis()->GetXmin(), signalDistrTimeCutDistCut->GetXaxis()->GetXmax());
   noiseGaus->SetParameter(0, lanGausFitFunc->GetParameter(0));
@@ -987,6 +997,10 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
       if(cont < 0) cont = 0; // avoid to go negative
       signalDistrTimeCutDistCut_noisePeakSub->SetBinContent(iBin, cont);
     }
+
+  //lanGausFit(signalDistrTimeCutDistCut_noisePeakSub, negSigmaFit * 4, posSigmaFit * 5);
+
+  delete fitCan;
 
   double chargeSum;
   int nTracks;
@@ -1195,9 +1209,11 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   noiseDistr->Write();
   noiseDistr_integral->Write();
   noiseDistrGroup->Write();
+  noiseDistrGroup_electrons->Write();
   noiseDistrPair->Write();
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
+  signalDistrTimeCutDistCut_electrons->Write();
   signalDistrTimeCutDistCut_noisePeakSub->Write();
   signalDistrTimeDistHPHcut->Write();
   noiseDistrTimeCut->Write();
@@ -1220,6 +1236,7 @@ TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit sig
   correlationPHstripHPHhit->Write();
   tempEvt->Write();
   tempDistr->Write();
+  scaleFactorDistr->Write();
   hitMapMod160->Write();
   chargeMapMod160->Write();
   chargeMapMod160Normalized->Write();

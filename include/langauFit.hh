@@ -103,6 +103,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
     }
 
   double halfRange = 20; // guess for the range of the gaus fit
+  if(inHist->GetXaxis()->GetXmax() > 10000) halfRange = 20 * 200; // charge in electrons
 
   TF1* gausFit = new TF1("gausFit", "gaus", histMax - halfRange, histMax + halfRange);
   gausFit->SetLineColor(kBlue);
@@ -147,6 +148,7 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
 
   // starting parameters
   sv[0] = 5;//landau width
+  if(inHist->GetXaxis()->GetXmax() > 10000) sv[0] = 5 * 200; // charge in electrons
   sv[1] = mpvStart; // mpv landau
   sv[2] = intStart; // integral
   if(gausSig > sv[0])
@@ -164,6 +166,12 @@ TF1* lanGausFit(TH1* inHist, double negSigmaFit, double posSigmaFit) // function
   // parameter limits
   pllo[0]=0.01; pllo[1]=-15.0; pllo[2]=1.0; pllo[3]=gausSig * 0.1;
   plhi[0]=20.0; plhi[1]=200.0; plhi[2]=10000000.0; plhi[3]=gausSig;
+
+  if(inHist->GetXaxis()->GetXmax() > 10000) // charge in electrons
+    {
+      pllo[0]=0.01; pllo[1]=-15.0; pllo[2]=1.0; pllo[3]=gausSig * 0.1;
+      plhi[0]=20.0 * 200; plhi[1]=200.0 * 200; plhi[2]=10000000.0; plhi[3]=gausSig;
+    }
 
   TF1* ffit = new TF1("lanGausFit", langaufun, fr[0], fr[1], 4);
   //  ffit->SetNpx(1e4);
