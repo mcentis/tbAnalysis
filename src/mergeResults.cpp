@@ -13,12 +13,42 @@
 #include "TLegend.h"
 #include "TCanvas.h"
 
+#include "ConfigFileReader.hh"
+
 int main(int argc, char* argv[])
 {
-  if(argc != 3)
+  if(argc != 4)
     {
-      std::cout << "Usage: mergeResults listOfLists dataDir" << std::endl;
+      std::cout << "Usage: mergeResults listOfLists dataDir confFile" << std::endl;
       return 1;
+    }
+
+  ConfigFileReader* conf = new ConfigFileReader(argv[3]);
+  conf->DumpConfMap();
+
+  double ADCtoe = atof(conf->GetValue("ADCtoe").c_str()); // parameter to apply conversion of ADC to e-
+  double ADCtoeErr = atof(conf->GetValue("ADCtoeErr").c_str());
+
+  double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
+  double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
+  double tCorr_p0Err = atof(conf->GetValue("tCorr_p0Err").c_str());
+  double tCorr_p1Err = atof(conf->GetValue("tCorr_p1Err").c_str());
+
+  double targetChipTemp = atof(conf->GetValue("targetChipTemp").c_str());
+  double tempErr = atof(conf->GetValue("tempErr").c_str());
+  double targetGain;
+  double targetGainErr;
+
+  if(tCorr_p1 || tCorr_p0)
+    {
+      targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp;
+      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2));
+    }
+  else
+    {
+      targetGain = 1;
+      targetGainErr = 1;
+      std::cout << "================================================> no gain error calculated!!!" << std::endl;
     }
 
   // big axis labels
@@ -107,6 +137,7 @@ int main(int argc, char* argv[])
 
   std::vector<TGraphErrors*> maxFitBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec;
+  std::vector<TGraphErrors*> mpvBiasVec_electrons;
   std::vector<TGraphErrors*> lanWBiasVec;
   std::vector<TGraphErrors*> gSigBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec;
@@ -143,6 +174,7 @@ int main(int argc, char* argv[])
   TDirectory* resDir;
   TGraphErrors* maxFitGr;
   TGraphErrors* mpvGr;
+  TGraphErrors* mpvGr_electrons;
   TGraphErrors* lanWGr;
   TGraphErrors* gSigGr;
   TGraphErrors* noiseGr;
@@ -279,6 +311,18 @@ int main(int argc, char* argv[])
       mpvGr->SetLineWidth(linWidth);
       mpvGr->SetMarkerColor(iColor);
       mpvGr->SetLineStyle(linStyle);
+
+      sprintf(name, "mpv_electrons_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      mpvGr_electrons = new TGraphErrors();
+      mpvGr_electrons->SetName(name);
+      mpvGr_electrons->SetTitle(title);
+      mpvGr_electrons->SetMarkerStyle(mrkStyle);
+      mpvGr_electrons->SetFillColor(kWhite);
+      mpvGr_electrons->SetLineColor(iColor); // set line color and style
+      mpvGr_electrons->SetLineWidth(linWidth);
+      mpvGr_electrons->SetMarkerColor(iColor);
+      mpvGr_electrons->SetLineStyle(linStyle);
 
       sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
@@ -525,11 +569,31 @@ int main(int argc, char* argv[])
 	  if(iRun == 0) chDistr->Draw("E");
 	  else chDistr->Draw("Esame");
 
+	  // charge in electrons
+	  chDistr = (TH1*) inFile->Get("signalDistrTimeCutDistCut_electrons"); // full hit 
+	  func = chDistr->GetFunction("gausLang");
+
+	  double gainMeas;
+	  double gainMeasErr;
+	  double tempTotErr = sqrt(pow(tempErr, 2) + pow(tempDistr->GetMeanError(), 2));
+	  if(tCorr_p1 || tCorr_p0)
+	    {
+	      gainMeas = tCorr_p0 + tCorr_p1 * tempDistr->GetMean();
+	      gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr->GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2));
+	    }
+
+	  double error = func->GetParameter(4) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func->GetParError(4) / func->GetParameter(4), 2));
+
+	  mpvGr_electrons->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(4));
+	  mpvGr_electrons->SetPointError(iRun, 0, error);
+
+
 	  //inFile->Close(); // do not close the files, otherwise the canvas does not find the histos to draw and save
 	} // loop on the runs for a sensor
 
 
       mpvBiasVec.push_back(mpvGr);
+      mpvBiasVec_electrons.push_back(mpvGr_electrons);
       maxFitBiasVec.push_back(maxFitGr);
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
@@ -781,6 +845,10 @@ int main(int argc, char* argv[])
   mpvAllSensors->SetName("mpvAllSensors");
   mpvAllSensors->SetTitle("MPV vs bias");
 
+  TMultiGraph* mpvAll_electrons = new TMultiGraph();
+  mpvAll_electrons->SetName("mpvAll_electrons");
+  mpvAll_electrons->SetTitle("MPV vs bias");
+
   TMultiGraph* maxFitAllSensors = new TMultiGraph();
   maxFitAllSensors->SetName("maxFitAllSensors");
   maxFitAllSensors->SetTitle("Maximum of the fit function");
@@ -865,6 +933,14 @@ int main(int argc, char* argv[])
   mpvAllSensors->GetXaxis()->SetTitle("Bias [V]");
   mpvAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   mpvAllSensors->GetYaxis()->SetTitle("Landau MPV [ADC counts]");
+
+  for(unsigned int i = 0; i < mpvBiasVec_electrons.size(); ++i) // loop on the graphs
+      mpvAll_electrons->Add(mpvBiasVec_electrons.at(i));
+
+  mpvAll_electrons->Draw("AP");
+  mpvAll_electrons->GetXaxis()->SetTitle("Bias [V]");
+  mpvAll_electrons->GetXaxis()->SetLimits(xmin, xmax);
+  mpvAll_electrons->GetYaxis()->SetTitle("Landau MPV [e^{-}]");
 
   for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1355,6 +1431,18 @@ int main(int argc, char* argv[])
   normMpvGraphCan->Modified();
   normMpvGraphCan->Update();
   normMpvGraphCan->Write();
+
+  mpvAll_electrons->Write();
+
+  TCanvas* mpvAllSenCan_electrons = new TCanvas("mpvAllSenCan_electrons");
+  mpvAll_electrons->Draw("APL");
+  legend->Draw();
+  mpvAllSenCan_electrons->SetGridx();
+  mpvAllSenCan_electrons->SetGridy();
+  mpvAllSenCan_electrons->Modified();
+  mpvAllSenCan_electrons->Update();
+  mpvAllSenCan_electrons->Write();
+
 
   outFile->Close();
 
