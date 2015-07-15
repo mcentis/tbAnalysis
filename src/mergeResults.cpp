@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> lanWBiasVec;
   std::vector<TGraphErrors*> gSigBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec;
+  std::vector<TGraphErrors*> noiseBiasVec_electrons;
   std::vector<TGraphErrors*> noiseGroupBiasVec;
   std::vector<TGraphErrors*> noisePairBiasVec;
   std::vector<TGraphErrors*> eff95BiasVec;
@@ -178,6 +179,7 @@ int main(int argc, char* argv[])
   TGraphErrors* lanWGr;
   TGraphErrors* gSigGr;
   TGraphErrors* noiseGr;
+  TGraphErrors* noiseGr_electrons;
   TGraphErrors* noiseGroupGr;
   TGraphErrors* noisePairGr;
   TGraphErrors* eff95Gr;
@@ -188,7 +190,6 @@ int main(int argc, char* argv[])
   TCanvas* histSupCan; // each sensor gets a canvas (charge distribution)
   TCanvas* etaSupCan; // each sensor gets a canvas (eta distribution)
   TMultiGraph* chargePosSup; // each sensor gets a graph
-
 
   char name[200];
   char title[500];
@@ -371,6 +372,18 @@ int main(int argc, char* argv[])
       noiseGr->SetLineWidth(linWidth);
       noiseGr->SetMarkerColor(iColor);
       noiseGr->SetLineStyle(linStyle);
+
+      sprintf(name, "noise_electrons_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      noiseGr_electrons = new TGraphErrors();
+      noiseGr_electrons->SetName(name);
+      noiseGr_electrons->SetTitle(title);
+      noiseGr_electrons->SetMarkerStyle(mrkStyle);
+      noiseGr_electrons->SetFillColor(kWhite);
+      noiseGr_electrons->SetLineColor(iColor); // set line color and style
+      noiseGr_electrons->SetLineWidth(linWidth);
+      noiseGr_electrons->SetMarkerColor(iColor);
+      noiseGr_electrons->SetLineStyle(linStyle);
 
       sprintf(name, "noiseGroup_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
@@ -587,6 +600,11 @@ int main(int argc, char* argv[])
 	  mpvGr_electrons->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(4));
 	  mpvGr_electrons->SetPointError(iRun, 0, error);
 
+	  noiseDistr = (TH1*) inFile->Get("fittedNoiseDistr_electrons");
+
+	  error =  noiseDistr->GetMean() * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(noiseDistr->GetMeanError() / noiseDistr->GetMean(), 2));
+	  noiseGr_electrons->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
+	  noiseGr_electrons->SetPointError(iRun, 0, error);
 
 	  //inFile->Close(); // do not close the files, otherwise the canvas does not find the histos to draw and save
 	} // loop on the runs for a sensor
@@ -598,6 +616,7 @@ int main(int argc, char* argv[])
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
       noiseBiasVec.push_back(noiseGr);
+      noiseBiasVec_electrons.push_back(noiseGr_electrons);
       noiseGroupBiasVec.push_back(noiseGroupGr);
       noisePairBiasVec.push_back(noisePairGr);
       eff95BiasVec.push_back(eff95Gr);
@@ -865,6 +884,10 @@ int main(int argc, char* argv[])
   noiseAllSensors->SetName("noiseAllSensors");
   noiseAllSensors->SetTitle("Noise vs bias");
 
+  TMultiGraph* noiseAll_electrons = new TMultiGraph();
+  noiseAll_electrons->SetName("noiseAll_electrons");
+  noiseAll_electrons->SetTitle("Noise vs bias");
+
   TMultiGraph* noiseGroupAllSensors = new TMultiGraph();
   noiseGroupAllSensors->SetName("noiseGroupAllSensors");
   noiseGroupAllSensors->SetTitle("Noise over multiple channels vs bias");
@@ -997,6 +1020,14 @@ int main(int argc, char* argv[])
   noiseAllSensors->GetXaxis()->SetTitle("Bias [V]");
   noiseAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   noiseAllSensors->GetYaxis()->SetTitle("Noise [ADC counts]");
+
+  for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
+    noiseAll_electrons->Add(noiseBiasVec_electrons.at(i));
+
+  noiseAll_electrons->Draw("AP");
+  noiseAll_electrons->GetXaxis()->SetTitle("Bias [V]");
+  noiseAll_electrons->GetXaxis()->SetLimits(xmin, xmax);
+  noiseAll_electrons->GetYaxis()->SetTitle("Noise [e^{-}]");
 
   for(unsigned int i = 0; i < noiseGroupBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1443,6 +1474,16 @@ int main(int argc, char* argv[])
   mpvAllSenCan_electrons->Update();
   mpvAllSenCan_electrons->Write();
 
+  noiseAll_electrons->Write();
+
+  TCanvas* noiseAllSenCan_electrons = new TCanvas("noiseAllSenCan_electrons");
+  noiseAll_electrons->Draw("APL");
+  legend->Draw();
+  noiseAllSenCan_electrons->SetGridx();
+  noiseAllSenCan_electrons->SetGridy();
+  noiseAllSenCan_electrons->Modified();
+  noiseAllSenCan_electrons->Update();
+  noiseAllSenCan_electrons->Write();
 
   outFile->Close();
 

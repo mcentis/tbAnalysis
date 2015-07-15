@@ -416,6 +416,15 @@ int main(int argc, char* argv[])
     }
   TH1D* fittedNoiseDistr = new TH1D("fittedNoiseDistr", "Distribution of the fitted noise;Noise [ADC];Entries", 61, -0.5, 20.5);
 
+  TH1D* noiseHistCh_electrons[nChannels]; // calculation of the noise
+  for(int i = 0; i < nChannels; ++i)
+    {
+      sprintf(name, "noiseDistrCh_electrons_%i", i);
+      sprintf(title, "Signal distribution (positivized) not associated with a hit, channel %i;Signal [e^{-}];Entries", i);
+      noiseHistCh_electrons[i] = new TH1D(name, title, 111, -40.5 * ADCtoe, 40.5 * ADCtoe);
+    }
+  TH1D* fittedNoiseDistr_electrons = new TH1D("fittedNoiseDistr_electrons", "Distribution of the fitted noise;Noise [e^{-}];Entries", 61, -0.5 * ADCtoe, 20.5 * ADCtoe);
+
   int nTrks = 0; // number of tracks in one event
   long int evtMrk = -1; // event marker
 
@@ -532,6 +541,7 @@ int main(int argc, char* argv[])
 	      	  {
 	      	    noiseDistr->Fill(evtAliPH[iCh] * polarity);
 	      	    noiseHistCh[iCh]->Fill(evtAliPH[iCh] * polarity / scaleFactor);
+	      	    noiseHistCh_electrons[iCh]->Fill(evtAliPH[iCh] * polarity / scaleFactor * ADCtoe);
 	      	  }
 
 	      noiseSum = 0;
@@ -964,6 +974,12 @@ int main(int argc, char* argv[])
 	noiseChiCh->SetPoint(noiseChiCh->GetN(), i, fit->GetChisquare() / fit->GetNDF());
 
 	fittedNoiseDistr->Fill(fit->GetParameter(2));
+
+	// noise in electrons
+	fit = new TF1("gausFit", "gaus", noiseHistCh_electrons[i]->GetMean() - 3 * noiseHistCh_electrons[i]->GetRMS(), noiseHistCh_electrons[i]->GetMean() + 2 * noiseHistCh_electrons[i]->GetRMS());
+	noiseHistCh_electrons[i]->Fit(fit, "RQ");
+
+	fittedNoiseDistr_electrons->Fill(fit->GetParameter(2));
       }
 
   // fit noise distr of the noise in groups of channels
@@ -1263,11 +1279,17 @@ int main(int argc, char* argv[])
   for(int i = 0; i < nChannels; ++i)
     noiseHistCh[i]->Write();
 
+  TDirectory* noiseDir_electrons = outFile->mkdir("noiseChannels_electrons");
+  noiseDir_electrons->cd();
+  for(int i = 0; i < nChannels; ++i)
+    noiseHistCh_electrons[i]->Write();
+
   outFile->cd();
   noiseMeanCh->Write();
   noiseCh->Write();
   noiseChiCh->Write();
   fittedNoiseDistr->Write();
+  fittedNoiseDistr_electrons->Write();
 
   outFile->Close();
 
