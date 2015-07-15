@@ -7,9 +7,40 @@ def landauFun(x, par):
     mpc = par[1] - mpshift * par[0];
     return TMath.Landau(x[0],mpc,par[0]) / par[0]
 
-if len(sys.argv) != 3:
-    print '\tUsage: python adcCalibration runList directory'
+if len(sys.argv) != 4:
+    print '\tUsage: python adcCalibration runList directory confFile'
     sys.exit(1)
+
+confDict = {}
+with open(sys.argv[3], 'r') as confFile:
+    for line in confFile:
+        if len(line) == 0: continue
+        sharpPos = line.find('#')
+        line = line[:sharpPos]
+        li = line.split()
+        if len(li) == 0: continue
+        if '=' in li: li.remove('=')
+        #print li
+        if len(li) != 2:
+            print 'Error in reading conf file!!'
+            print li
+            continue
+        confDict[li[0]] = li[1]
+
+ADCtoe = float(confDict['ADCtoe'])
+ADCtoeErr = float(confDict['ADCtoeErr'])
+
+tCorr_p0 = float(confDict['tCorr_p0'])
+tCorr_p1 = float(confDict['tCorr_p1'])
+tCorr_p0Err = float(confDict['tCorr_p0Err'])
+tCorr_p1Err = float(confDict['tCorr_p1Err'])
+
+targetChipTemp = float(confDict['targetChipTemp'])
+tempErr = float(confDict['tempErr'])
+
+targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp
+targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2))
+
 
 runInfo = []
 
@@ -68,18 +99,27 @@ for run in runInfo:
     #li.Print()
     func = li[0]#hist.GetFunction('gausLang')
     #print func
-    print '\tMPV: %f +- %f' %(func.GetParameter(4), func.GetParError(4))
     angle = radians(float(run[2]))
     effThick = thickness / cos(angle)
     effThickErr = effThick * sqrt(pow(tan(angle) * errAngle, 2) + pow(errThick / thickness, 2))
     nPoint = calGrMPV.GetN()
+
+    tempDistr = inFile.Get('tempDistr')
+    tempTotErr = sqrt(pow(tempErr, 2) + pow(tempDistr.GetMeanError(), 2))
+    gainMeas = tCorr_p0 + tCorr_p1 * tempDistr.GetMean()
+    gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr.GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2))
+    error = func.GetParameter(4) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func.GetParError(4) / func.GetParameter(4), 2))
+
     calGrMPV.SetPoint(nPoint, func.GetParameter(4), ionizationMPV * effThick)
-    calGrMPV.SetPointError(nPoint, func.GetParError(4), ionizationMPV * effThickErr)
+    calGrMPV.SetPointError(nPoint, error, ionizationMPV * effThickErr)
+    print '\tMPV: %f +- %f' %(func.GetParameter(4), error)
 
     hist = inFile.Get('signalDistrTimeCutDistCut_noisePeakSub')
+
+    error = hist.GetMean() * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(hist.GetMeanError() / hist.GetMean(), 2))
     calGrMean.SetPoint(nPoint, hist.GetMean(), ionizationMean * effThick)
-    calGrMean.SetPointError(nPoint, hist.GetMeanError(), ionizationMean * effThickErr)
-    print '\tMean: %f +- %f\n' %(hist.GetMean(), hist.GetMeanError())
+    calGrMean.SetPointError(nPoint, error, ionizationMean * effThickErr)
+    print '\tMean: %f +- %f\n' %(hist.GetMean(), error)
 
 calFuncMPV = TF1('calFuncMPV', '[0] * x', 0, 100)
 
