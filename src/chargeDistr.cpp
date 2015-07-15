@@ -190,14 +190,20 @@ int main(int argc, char* argv[])
 
   double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
   double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
+  double tCorr_p0Err = atof(conf->GetValue("tCorr_p0Err").c_str());
+  double tCorr_p1Err = atof(conf->GetValue("tCorr_p1Err").c_str());
   double tCorr_p2 = atof(conf->GetValue("tCorr_p2").c_str());
+  double tempErr = atof(conf->GetValue("tempErr").c_str());
   double targetChipTemp = atof(conf->GetValue("targetChipTemp").c_str());
   double targetGain;
+  double targetGainErr;
   bool applyTcorr = false; // flag used in the loop on the tracks
 
   if(tCorr_p0 || tCorr_p1 || tCorr_p2)
     {
       targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp + tCorr_p2 * targetChipTemp * targetChipTemp;
+      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2));
+
       applyTcorr = true;
 
       std::cout << "=============================>>> WARNING a temperature correction is going to be applied to the signal, the single channel noise will not be corrected\n";
@@ -390,7 +396,7 @@ int main(int argc, char* argv[])
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts, time cut, distance cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 151, -50.5, 511.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 151, -50.5, 511.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
@@ -737,7 +743,7 @@ int main(int argc, char* argv[])
 		      
 		      hitMap->Fill(posX, posY);
 
-		      signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), highestCharge * polarity);
+		      //signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), highestCharge * polarity);
 		    } // distance cut
 
 		  // totally track based eta distr
@@ -749,6 +755,9 @@ int main(int argc, char* argv[])
 		  etaDistrTrackTimeCut->Fill(phR / (phR + phL));
 
 		  etaTrackVsPos->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), phR / (phR + phL));
+
+		  if(abs(hiChargeCh - highestPHstrip) <= 1) // the strip with the highest PH is neighboring the hit one
+		    signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), (phL + phR) * polarity); //distance cut for this guy
 
 		  // output for test
 		  // modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart);
@@ -936,11 +945,23 @@ int main(int argc, char* argv[])
       slice = signalStrip->ProjectionY(name, iBin, iBin);
       slice->SetTitle(title);
 
+      // use noise from pair strip, since the charge is now summed from 2 strips
       fit = gausLanGausFitFixGausNoise(slice, negSigmaFit, posSigmaFit,
-				       noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+				       noiseDistrPair->GetMean(), noiseDistrPair->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+
+      double gainMeas;
+      double gainMeasErr;
+      double tempTotErr = sqrt(pow(tempErr, 2) + pow(tempDistr->GetMeanError(), 2));
+      if(tCorr_p1 || tCorr_p0)
+	{
+	  gainMeas = tCorr_p0 + tCorr_p1 * tempDistr->GetMean();
+	  gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr->GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2));
+	}
+
+      double error = fit->GetParameter(4) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(fit->GetParError(4) / fit->GetParameter(4), 2));
 
       mpvStrip->SetPoint(mpvStrip->GetN(), pos, fit->GetParameter(4));
-      mpvStrip->SetPointError(mpvStrip->GetN() - 1, binW / 2, fit->GetParError(4));
+      mpvStrip->SetPointError(mpvStrip->GetN() - 1, binW / 2, error);
 
       slice->Write();
     }
