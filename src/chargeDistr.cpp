@@ -186,6 +186,7 @@ int main(int argc, char* argv[])
   std::vector<int> goodChVec = readGoodChFile(conf->GetValue("goodChFile").c_str()); // good channels
 
   double ADCtoe = atof(conf->GetValue("ADCtoe").c_str()); // parameter to apply conversion of ADC to e-
+  double ADCtoeErr = atof(conf->GetValue("ADCtoeErr").c_str()); // parameter to apply conversion of ADC to e-
 
   double tCorr_p0 = atof(conf->GetValue("tCorr_p0").c_str()); // parameters to apply temperature correction
   double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
@@ -959,6 +960,17 @@ int main(int argc, char* argv[])
   noiseChiCh->SetTitle("#chi^{2} / ndf of the noise fit vs channel");
   noiseChiCh->SetMarkerStyle(8);
 
+  TGraphErrors* noiseMeanCh_electrons = new TGraphErrors();
+  noiseMeanCh_electrons->SetName("noiseMeanCh_electrons");
+  noiseMeanCh_electrons->SetTitle("Mean of the noise fit vs channel");
+  noiseMeanCh_electrons->SetMarkerStyle(8);
+
+  TGraphErrors* noiseCh_electrons = new TGraphErrors();
+  noiseCh_electrons->SetName("noiseCh_electrons");
+  noiseCh_electrons->SetTitle("Sigma of the noise fit vs channel");
+  noiseCh_electrons->SetMarkerStyle(8);
+
+
   for(int i = 0; i < nChannels; ++i) // fit of the noise distribution for all the channels
     if(noiseHistCh[i]->GetEntries() != 0)
       {
@@ -978,6 +990,14 @@ int main(int argc, char* argv[])
 	// noise in electrons
 	fit = new TF1("gausFit", "gaus", noiseHistCh_electrons[i]->GetMean() - 3 * noiseHistCh_electrons[i]->GetRMS(), noiseHistCh_electrons[i]->GetMean() + 2 * noiseHistCh_electrons[i]->GetRMS());
 	noiseHistCh_electrons[i]->Fit(fit, "RQ");
+
+	double error = fit->GetParameter(1) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(fit->GetParError(1) / fit->GetParameter(1), 2));
+	noiseMeanCh_electrons->SetPoint(noiseMeanCh_electrons->GetN(), i, fit->GetParameter(1));
+	noiseMeanCh_electrons->SetPointError(noiseMeanCh_electrons->GetN() - 1, 0, error);
+
+	error = fit->GetParameter(2) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(fit->GetParError(2) / fit->GetParameter(2), 2));
+	noiseCh_electrons->SetPoint(noiseCh_electrons->GetN(), i, fit->GetParameter(2));
+	noiseCh_electrons->SetPointError(noiseCh_electrons->GetN() - 1, 0, fit->GetParError(2));
 
 	fittedNoiseDistr_electrons->Fill(fit->GetParameter(2));
       }
@@ -1170,6 +1190,14 @@ int main(int argc, char* argv[])
   noiseChiCh->GetXaxis()->SetTitle("Channel number");
   noiseChiCh->GetYaxis()->SetTitle("#chi^{2} / ndf [ADC]");
 
+  noiseMeanCh_electrons->Draw("AP");
+  noiseMeanCh_electrons->GetXaxis()->SetTitle("Channel number");
+  noiseMeanCh_electrons->GetYaxis()->SetTitle("Mean [e^{-}]");
+
+  noiseCh_electrons->Draw("AP");
+  noiseCh_electrons->GetXaxis()->SetTitle("Channel number");
+  noiseCh_electrons->GetYaxis()->SetTitle("Sigma [e^{-}]");
+
   mpvStrip->Draw("AP");
   mpvStrip->GetXaxis()->SetTitle("Position [AU]");
   mpvStrip->GetYaxis()->SetTitle("Landau MPV [ADC]");
@@ -1289,6 +1317,8 @@ int main(int argc, char* argv[])
   noiseCh->Write();
   noiseChiCh->Write();
   fittedNoiseDistr->Write();
+  noiseMeanCh_electrons->Write();
+  noiseCh_electrons->Write();
   fittedNoiseDistr_electrons->Write();
 
   outFile->Close();
