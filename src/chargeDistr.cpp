@@ -401,6 +401,10 @@ int main(int argc, char* argv[])
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
 
+  TGraphErrors* mpvStrip_norm = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
+  mpvStrip_norm->SetName("mpvStrip_norm");
+  mpvStrip_norm->SetTitle("Landau MPV various strip parts, time cut, distance cut, normalized to the 5 strips MPV");
+
   // eta distribution
   minX = -0.5;
   maxX = 1.5;
@@ -958,10 +962,16 @@ int main(int argc, char* argv[])
 	  gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr->GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2));
 	}
 
-      double error = fit->GetParameter(4) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(fit->GetParError(4) / fit->GetParameter(4), 2));
+      double error = fit->GetParameter(4) * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(fit->GetParError(4) / fit->GetParameter(4), 2));
 
       mpvStrip->SetPoint(mpvStrip->GetN(), pos, fit->GetParameter(4));
       mpvStrip->SetPointError(mpvStrip->GetN() - 1, binW / 2, error);
+
+      // normalization to the 5 strip MPV
+      error = fit->GetParameter(4) / lanGausFitFunc->GetParameter(4) * sqrt(pow(fit->GetParError(4) / fit->GetParameter(4), 2) + pow(lanGausFitFunc->GetParError(4) / lanGausFitFunc->GetParameter(4), 2));
+
+      mpvStrip_norm->SetPoint(mpvStrip_norm->GetN(), pos, fit->GetParameter(4) / lanGausFitFunc->GetParameter(4));
+      mpvStrip_norm->SetPointError(mpvStrip_norm->GetN() - 1, binW / 2, error);
 
       slice->Write();
     }
@@ -1223,6 +1233,10 @@ int main(int argc, char* argv[])
   mpvStrip->GetXaxis()->SetTitle("Position [AU]");
   mpvStrip->GetYaxis()->SetTitle("Landau MPV [ADC]");
 
+  mpvStrip_norm->Draw("AP");
+  mpvStrip_norm->GetXaxis()->SetTitle("Position [AU]");
+  mpvStrip_norm->GetYaxis()->SetTitle("MPV slice / MPV 5 strips");
+
   delete servCan;
 
   outFile->cd();
@@ -1314,6 +1328,7 @@ int main(int argc, char* argv[])
   chargeMapNormProjY->Write();
   signalStrip->Write();
   mpvStrip->Write();
+  mpvStrip_norm->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
   CDFetaDistrTimeCutDistCut->Write();
