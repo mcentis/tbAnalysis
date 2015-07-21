@@ -87,6 +87,10 @@ calGrMean.SetFillColor(kWhite)
 calGrMean.SetLineColor(kBlue)
 calGrMean.SetMarkerColor(kBlue)
 
+ratioGr = TGraphErrors()
+ratioGr.SetName('ratioGr')
+ratioGr.SetMarkerStyle(20)
+
 for run in runInfo:
     print run
     fileName = sys.argv[2] + '/' + run[-1] + '.root'
@@ -108,7 +112,8 @@ for run in runInfo:
     tempTotErr = sqrt(pow(tempErr, 2) + pow(tempDistr.GetMeanError(), 2))
     gainMeas = tCorr_p0 + tCorr_p1 * tempDistr.GetMean()
     gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr.GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2))
-    error = func.GetParameter(4) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func.GetParError(4) / func.GetParameter(4), 2))
+    error = func.GetParameter(4) * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func.GetParError(4) / func.GetParameter(4), 2))
+    errMPV = error
 
     calGrMPV.SetPoint(nPoint, func.GetParameter(4), ionizationMPV * effThick)
     calGrMPV.SetPointError(nPoint, error, ionizationMPV * effThickErr)
@@ -116,10 +121,16 @@ for run in runInfo:
 
     hist = inFile.Get('signalDistrTimeCutDistCut_noisePeakSub')
 
-    error = hist.GetMean() * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(hist.GetMeanError() / hist.GetMean(), 2))
+    error = hist.GetMean() * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(hist.GetMeanError() / hist.GetMean(), 2))
     calGrMean.SetPoint(nPoint, hist.GetMean(), ionizationMean * effThick)
     calGrMean.SetPointError(nPoint, error, ionizationMean * effThickErr)
     print '\tMean: %f +- %f\n' %(hist.GetMean(), error)
+    
+    ratio = func.GetParameter(4) / hist.GetMean()
+    ratioErr = ratio * sqrt(pow(errMPV / func.GetParameter(4), 2) + pow(error / hist.GetMean(), 2))
+    ratioGr.SetPoint(nPoint, angle, ratio)
+    ratioGr.SetPointError(nPoint, errAngle, ratioErr)
+    print '\tMPV / Mean: %f +- %f\n' %(ratio, ratioErr)
 
 calFuncMPV = TF1('calFuncMPV', '[0] * x', 0, 100)
 
@@ -140,6 +151,11 @@ calGrMean.GetXaxis().SetLimits(0, 200)
 calGrMean.GetYaxis().SetRangeUser(0, 25000)
 calGrMean.GetXaxis().SetTitle('Landau Mean [ADC]')
 calGrMean.GetYaxis().SetTitle('Expected ionization')
+
+ratioCan = TCanvas('ratioCan', 'ratioCan')
+ratioGr.Draw('ap')
+ratioGr.GetXaxis().SetTitle('Angle [^{%circ}]')
+ratioGr.GetYaxis().SetTitle('MPV / mean')
 
 calGr = TMultiGraph()
 calGr.Add(calGrMPV)
