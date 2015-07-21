@@ -399,7 +399,11 @@ int main(int argc, char* argv[])
   TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 151, -50.5, 511.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
-  mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut");
+  mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut"); 
+
+  TGraphErrors* sigmaStrip = new TGraphErrors(); // graph of the gaus sigma for slices of the signalStrip
+  sigmaStrip->SetName("sigmaStrip");
+  sigmaStrip->SetTitle("Gauss sigma various strip parts, time cut, distance cut");
 
   TGraphErrors* mpvStrip_norm = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip_norm->SetName("mpvStrip_norm");
@@ -967,6 +971,10 @@ int main(int argc, char* argv[])
       mpvStrip->SetPoint(mpvStrip->GetN(), pos, fit->GetParameter(4));
       mpvStrip->SetPointError(mpvStrip->GetN() - 1, binW / 2, error);
 
+      error = fit->GetParameter(6) * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(fit->GetParError(6) / fit->GetParameter(6), 2));
+      sigmaStrip->SetPoint(sigmaStrip->GetN(), pos, fit->GetParameter(6));
+      sigmaStrip->SetPointError(sigmaStrip->GetN() - 1, binW / 2, error);
+
       // normalization to the 5 strip MPV
       error = fit->GetParameter(4) / lanGausFitFunc->GetParameter(4) * sqrt(pow(fit->GetParError(4) / fit->GetParameter(4), 2) + pow(lanGausFitFunc->GetParError(4) / lanGausFitFunc->GetParameter(4), 2));
 
@@ -975,6 +983,10 @@ int main(int argc, char* argv[])
 
       slice->Write();
     }
+
+  TH1D* entriesStrip = signalStrip->ProjectionX();
+  entriesStrip->SetName("entriesStrip");
+  entriesStrip->SetTitle("Entries vs position between strips;Position [A.U.];Entries");
 
   TGraphErrors* noiseMeanCh = new TGraphErrors();
   noiseMeanCh->SetName("noiseMeanCh");
@@ -1233,6 +1245,10 @@ int main(int argc, char* argv[])
   mpvStrip->GetXaxis()->SetTitle("Position [AU]");
   mpvStrip->GetYaxis()->SetTitle("Landau MPV [ADC]");
 
+  sigmaStrip->Draw("AP");
+  sigmaStrip->GetXaxis()->SetTitle("Position [AU]");
+  sigmaStrip->GetYaxis()->SetTitle("Gaus sigma [ADC]");
+
   mpvStrip_norm->Draw("AP");
   mpvStrip_norm->GetXaxis()->SetTitle("Position [AU]");
   mpvStrip_norm->GetYaxis()->SetTitle("MPV slice / MPV 5 strips");
@@ -1327,7 +1343,9 @@ int main(int argc, char* argv[])
   chargeMapNormProjX->Write();
   chargeMapNormProjY->Write();
   signalStrip->Write();
+  entriesStrip->Write();
   mpvStrip->Write();
+  sigmaStrip->Write();
   mpvStrip_norm->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
