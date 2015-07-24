@@ -7,6 +7,7 @@
 #include "TPaveText.h"
 #include "TFile.h"
 #include "TH1.h"
+#include "TMath.h"
 #include "TGraphErrors.h"
 #include "TMultiGraph.h"
 #include "TF1.h"
@@ -14,6 +15,15 @@
 #include "TCanvas.h"
 
 #include "ConfigFileReader.hh"
+
+double Median(const TH1D * h1) {
+  int n = h1->GetXaxis()->GetNbins(); 
+  std::vector<double>  x(n);
+  h1->GetXaxis()->GetCenter( &x[0] );
+  const double * y = h1->GetArray();
+  // exclude underflow/overflows from bin content array y
+  return TMath::Median(n, &x[0], &y[1]);
+}
 
 int main(int argc, char* argv[])
 {
@@ -135,6 +145,8 @@ int main(int argc, char* argv[])
       sensorThickness.push_back(str);
     }
 
+  std::vector<TGraphErrors*> medianBiasVec;
+  std::vector<TGraphErrors*> meanBiasVec;
   std::vector<TGraphErrors*> maxFitBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec_electrons;
@@ -173,6 +185,8 @@ int main(int argc, char* argv[])
   TH1* resYDistr;
   TH1* tempDistr;
   TDirectory* resDir;
+  TGraphErrors* medianGr;
+  TGraphErrors* meanGr;
   TGraphErrors* maxFitGr;
   TGraphErrors* mpvGr;
   TGraphErrors* mpvGr_electrons;
@@ -324,6 +338,30 @@ int main(int argc, char* argv[])
       mpvGr_electrons->SetLineWidth(linWidth);
       mpvGr_electrons->SetMarkerColor(iColor);
       mpvGr_electrons->SetLineStyle(linStyle);
+
+      sprintf(name, "mean_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      meanGr = new TGraphErrors();
+      meanGr->SetName(name);
+      meanGr->SetTitle(title);
+      meanGr->SetMarkerStyle(mrkStyle);
+      meanGr->SetFillColor(kWhite);
+      meanGr->SetLineColor(iColor); // set line color and style
+      meanGr->SetLineWidth(linWidth);
+      meanGr->SetMarkerColor(iColor);
+      meanGr->SetLineStyle(linStyle);
+
+      sprintf(name, "median_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      medianGr = new TGraphErrors();
+      medianGr->SetName(name);
+      medianGr->SetTitle(title);
+      medianGr->SetMarkerStyle(mrkStyle);
+      medianGr->SetFillColor(kWhite);
+      medianGr->SetLineColor(iColor); // set line color and style
+      medianGr->SetLineWidth(linWidth);
+      medianGr->SetMarkerColor(iColor);
+      medianGr->SetLineStyle(linStyle);
 
       sprintf(name, "maxFit_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
@@ -582,6 +620,13 @@ int main(int argc, char* argv[])
 	  if(iRun == 0) chDistr->Draw("E");
 	  else chDistr->Draw("Esame");
 
+	  // mean and median
+	  TH1D* chDistr_nSub = (TH1D*) inFile->Get("signalDistrTimeCutDistCut_noisePeakSub"); // noise peak subtracted
+	  meanGr->SetPoint(iRun, fabs(bias.at(iRun)), chDistr_nSub->GetMean());
+	  meanGr->SetPointError(iRun, 0, chDistr_nSub->GetMeanError());
+
+	  medianGr->SetPoint(iRun, fabs(bias.at(iRun)), Median(chDistr_nSub));
+
 	  // charge in electrons
 	  chDistr = (TH1*) inFile->Get("signalDistrTimeCutDistCut_electrons"); // full hit 
 	  func = chDistr->GetFunction("gausLang");
@@ -612,6 +657,8 @@ int main(int argc, char* argv[])
 
       mpvBiasVec.push_back(mpvGr);
       mpvBiasVec_electrons.push_back(mpvGr_electrons);
+      meanBiasVec.push_back(meanGr);
+      medianBiasVec.push_back(medianGr);
       maxFitBiasVec.push_back(maxFitGr);
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
@@ -868,6 +915,14 @@ int main(int argc, char* argv[])
   mpvAll_electrons->SetName("mpvAll_electrons");
   mpvAll_electrons->SetTitle("MPV vs bias");
 
+  TMultiGraph* meanAllSensors = new TMultiGraph();
+  meanAllSensors->SetName("meanAllSensors");
+  meanAllSensors->SetTitle("Mean of the charge distribution (noise sub)");
+
+  TMultiGraph* medianAllSensors = new TMultiGraph();
+  medianAllSensors->SetName("medianAllSensors");
+  medianAllSensors->SetTitle("Median of the charge distribution (noise sub)");
+
   TMultiGraph* maxFitAllSensors = new TMultiGraph();
   maxFitAllSensors->SetName("maxFitAllSensors");
   maxFitAllSensors->SetTitle("Maximum of the fit function");
@@ -964,6 +1019,22 @@ int main(int argc, char* argv[])
   mpvAll_electrons->GetXaxis()->SetTitle("Bias [V]");
   mpvAll_electrons->GetXaxis()->SetLimits(xmin, xmax);
   mpvAll_electrons->GetYaxis()->SetTitle("Landau MPV [e^{-}]");
+
+  for(unsigned int i = 0; i < meanBiasVec.size(); ++i) // loop on the graphs
+    meanAllSensors->Add(meanBiasVec.at(i));
+
+  meanAllSensors->Draw("AP");
+  meanAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  meanAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  meanAllSensors->GetYaxis()->SetTitle("Mean [ADC counts]");
+
+  for(unsigned int i = 0; i < medianBiasVec.size(); ++i) // loop on the graphs
+    medianAllSensors->Add(medianBiasVec.at(i));
+
+  medianAllSensors->Draw("AP");
+  medianAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  medianAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  medianAllSensors->GetYaxis()->SetTitle("Median [ADC counts]");
 
   for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1225,6 +1296,28 @@ int main(int argc, char* argv[])
   mpvAllSenCan->Modified();
   mpvAllSenCan->Update();
   mpvAllSenCan->Write();
+
+  meanAllSensors->Write();
+
+  TCanvas* meanAllSenCan = new TCanvas("meanAllSenCan");
+  meanAllSensors->Draw("APL");
+  legend->Draw();
+  meanAllSenCan->SetGridx();
+  meanAllSenCan->SetGridy();
+  meanAllSenCan->Modified();
+  meanAllSenCan->Update();
+  meanAllSenCan->Write();
+
+  medianAllSensors->Write();
+
+  TCanvas* medianAllSenCan = new TCanvas("medianAllSenCan");
+  medianAllSensors->Draw("APL");
+  legend->Draw();
+  medianAllSenCan->SetGridx();
+  medianAllSenCan->SetGridy();
+  medianAllSenCan->Modified();
+  medianAllSenCan->Update();
+  medianAllSenCan->Write();
 
   // for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
   //   maxFitBiasVec.at(i)->Write();
