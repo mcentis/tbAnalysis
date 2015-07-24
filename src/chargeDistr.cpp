@@ -889,7 +889,7 @@ int main(int argc, char* argv[])
   fitResiduals(residualsYselected, -0.15, 0.15);
 
   TF1* lanGausFitFunc = gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut, negSigmaFit, posSigmaFit,
-						noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
+						   noiseDistrGroup->GetMean(), noiseDistrGroup->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   /*TF1* lanGausFitFunc_electrons = */gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut_electrons, negSigmaFit, posSigmaFit,
 							     noiseDistrGroup_electrons->GetMean(), noiseDistrGroup_electrons->GetRMS()); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
