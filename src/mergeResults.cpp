@@ -151,7 +151,9 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> mpvBiasVec;
   std::vector<TGraphErrors*> mpvBiasVec_electrons;
   std::vector<TGraphErrors*> lanWBiasVec;
+  std::vector<TGraphErrors*> lanWBiasVec_norm;
   std::vector<TGraphErrors*> gSigBiasVec;
+  std::vector<TGraphErrors*> gSigBiasVec_norm;
   std::vector<TGraphErrors*> noiseBiasVec;
   std::vector<TGraphErrors*> noiseBiasVec_electrons;
   std::vector<TGraphErrors*> noiseGroupBiasVec;
@@ -192,6 +194,8 @@ int main(int argc, char* argv[])
   TGraphErrors* mpvGr_electrons;
   TGraphErrors* lanWGr;
   TGraphErrors* gSigGr;
+  TGraphErrors* lanWGr_norm; // normalization to mpv
+  TGraphErrors* gSigGr_norm;
   TGraphErrors* noiseGr;
   TGraphErrors* noiseGr_electrons;
   TGraphErrors* noiseGroupGr;
@@ -399,6 +403,30 @@ int main(int argc, char* argv[])
       gSigGr->SetMarkerColor(iColor);
       gSigGr->SetLineStyle(linStyle);
 
+      sprintf(name, "lanW_norm)_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      lanWGr_norm = new TGraphErrors();
+      lanWGr_norm->SetName(name);
+      lanWGr_norm->SetTitle(title);
+      lanWGr_norm->SetMarkerStyle(mrkStyle);
+      lanWGr_norm->SetFillColor(kWhite);
+      lanWGr_norm->SetLineColor(iColor); // set line color and style
+      lanWGr_norm->SetLineWidth(linWidth);
+      lanWGr_norm->SetMarkerColor(iColor);
+      lanWGr_norm->SetLineStyle(linStyle);
+
+      sprintf(name, "gSig_norm_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      gSigGr_norm = new TGraphErrors();
+      gSigGr_norm->SetName(name);
+      gSigGr_norm->SetTitle(title);
+      gSigGr_norm->SetMarkerStyle(mrkStyle);
+      gSigGr_norm->SetFillColor(kWhite);
+      gSigGr_norm->SetLineColor(iColor); // set line color and style
+      gSigGr_norm->SetLineWidth(linWidth);
+      gSigGr_norm->SetMarkerColor(iColor);
+      gSigGr_norm->SetLineStyle(linStyle);
+
       sprintf(name, "noise_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
       noiseGr = new TGraphErrors();
@@ -544,6 +572,18 @@ int main(int argc, char* argv[])
 	  gSigGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(6));
 	  gSigGr->SetPointError(iRun, 0, func->GetParError(6));
 
+	  double ratio = func->GetParameter(3) / func->GetParameter(4);
+	  double ratioErr = ratio * sqrt(pow(func->GetParError(3) / func->GetParameter(3), 2) + pow(func->GetParError(4) / func->GetParameter(4), 2));
+
+	  lanWGr_norm->SetPoint(iRun, fabs(bias.at(iRun)), ratio);
+	  lanWGr_norm->SetPointError(iRun, 0, ratioErr);
+
+	  ratio = func->GetParameter(6) / func->GetParameter(4);
+	  ratioErr = ratio * sqrt(pow(func->GetParError(6) / func->GetParameter(6), 2) + pow(func->GetParError(4) / func->GetParameter(4), 2));
+
+	  gSigGr_norm->SetPoint(iRun, fabs(bias.at(iRun)), ratio);
+	  gSigGr_norm->SetPointError(iRun, 0, ratioErr);
+
 	  noiseDistr = (TH1*) inFile->Get("fittedNoiseDistr");
 
 	  noiseGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseDistr->GetMean());
@@ -662,6 +702,8 @@ int main(int argc, char* argv[])
       maxFitBiasVec.push_back(maxFitGr);
       lanWBiasVec.push_back(lanWGr);
       gSigBiasVec.push_back(gSigGr);
+      lanWBiasVec_norm.push_back(lanWGr_norm);
+      gSigBiasVec_norm.push_back(gSigGr_norm);
       noiseBiasVec.push_back(noiseGr);
       noiseBiasVec_electrons.push_back(noiseGr_electrons);
       noiseGroupBiasVec.push_back(noiseGroupGr);
@@ -933,7 +975,15 @@ int main(int argc, char* argv[])
 
   TMultiGraph* gSigAllSensors = new TMultiGraph();
   gSigAllSensors->SetName("gSigAllSensors");
-  gSigAllSensors->SetTitle("Gaus #sigma vs bias");
+  gSigAllSensors->SetTitle("Gauss #sigma vs bias");
+
+  TMultiGraph* lanW_normAllSensors = new TMultiGraph();
+  lanW_normAllSensors->SetName("lanW_normAllSensors");
+  lanW_normAllSensors->SetTitle("Landau width / MPV vs bias");
+
+  TMultiGraph* gSig_normAllSensors = new TMultiGraph();
+  gSig_normAllSensors->SetName("gSig_normAllSensors");
+  gSig_normAllSensors->SetTitle("Gauss #sigma / MPV vs bias");
 
   TMultiGraph* noiseAllSensors = new TMultiGraph();
   noiseAllSensors->SetName("noiseAllSensors");
@@ -1068,7 +1118,7 @@ int main(int argc, char* argv[])
     {
       gSigBiasVec.at(i)->Draw("AP");
       gSigBiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      gSigBiasVec.at(i)->GetYaxis()->SetTitle("Gaus #sigma [ADC counts]");
+      gSigBiasVec.at(i)->GetYaxis()->SetTitle("Gauss #sigma [ADC counts]");
 
       gSigAllSensors->Add(gSigBiasVec.at(i));
     }
@@ -1077,6 +1127,22 @@ int main(int argc, char* argv[])
   gSigAllSensors->GetXaxis()->SetTitle("Bias [V]");
   gSigAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   gSigAllSensors->GetYaxis()->SetTitle("Gaus #sigma [ADC counts]");
+
+  for(unsigned int i = 0; i < lanWBiasVec_norm.size(); ++i) // loop on the graphs
+    lanW_normAllSensors->Add(lanWBiasVec_norm.at(i));
+
+  lanW_normAllSensors->Draw("AP");
+  lanW_normAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  lanW_normAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  lanW_normAllSensors->GetYaxis()->SetTitle("Landau width / MPV");
+
+  for(unsigned int i = 0; i < gSigBiasVec_norm.size(); ++i) // loop on the graphs
+    gSig_normAllSensors->Add(gSigBiasVec_norm.at(i));
+
+  gSig_normAllSensors->Draw("AP");
+  gSig_normAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  gSig_normAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  gSig_normAllSensors->GetYaxis()->SetTitle("Gauss #sigma / MPV");
 
   for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1363,6 +1429,28 @@ int main(int argc, char* argv[])
   gSigAllSenCan->Modified();
   gSigAllSenCan->Update();
   gSigAllSenCan->Write();
+
+  lanW_normAllSensors->Write();
+
+  TCanvas* lanW_normAllSenCan = new TCanvas("lanW_normAllSenCan");
+  lanW_normAllSensors->Draw("APL");
+  legend->Draw();
+  lanW_normAllSenCan->SetGridx();
+  lanW_normAllSenCan->SetGridy();
+  lanW_normAllSenCan->Modified();
+  lanW_normAllSenCan->Update();
+  lanW_normAllSenCan->Write();
+
+  gSig_normAllSensors->Write();
+
+  TCanvas* gSig_normAllSenCan = new TCanvas("gSig_normAllSenCan");
+  gSig_normAllSensors->Draw("APL");
+  legend->Draw();
+  gSig_normAllSenCan->SetGridx();
+  gSig_normAllSenCan->SetGridy();
+  gSig_normAllSenCan->Modified();
+  gSig_normAllSenCan->Update();
+  gSig_normAllSenCan->Write();
 
   // for(unsigned int i = 0; i < noiseBiasVec.size(); ++i) // loop on the graphs
   //   noiseBiasVec.at(i)->Write();
