@@ -52,23 +52,6 @@ with open(sys.argv[1], 'r') as runInfoFile:
 
 #print runInfo
 
-# ========================= stability of mean value of landau, it is not stable at all.
-
-# land = TF1('land', landauFun, -50, 500000, 2)
-# land.SetNpx(int(1e4))
-# land.SetParameter(0, 3)
-# land.SetParameter(1, 30)
-
-# maxlist = [500, 1000, 5000, 10000, 50000, 100000]
-# minp = -50
-
-# for a in maxlist:
-#     hist = TH1D('hist' + str(a), 'hist', int((a - minp) / 2.), minp, a)
-#     for i in range((a - minp) * 5):
-#         hist.Fill(land.GetRandom())
-
-#     print 'max range %d\tentries %f\tmean %f' %(a, hist.GetEntries(), hist.GetMean())
-
 calGrMPV = TGraphErrors()
 calGrMPV.SetName('calGrMPV')
 calGrMPV.SetTitle('Landau MPV')
@@ -119,6 +102,7 @@ for run in runInfo:
     print '\tMPV: %f +- %f' %(func.GetParameter(4), error)
 
     hist = inFile.Get('signalDistrTimeCutDistCut_noisePeakSub')
+    hist.GetXaxis().SetRangeUser(7, 511) # cut to improve mean determination
 
     error = hist.GetMean() * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(hist.GetMeanError() / hist.GetMean(), 2))
 
