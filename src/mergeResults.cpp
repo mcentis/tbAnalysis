@@ -591,8 +591,12 @@ int main(int argc, char* argv[])
 
 	  noiseGroupDistr = (TH1*) inFile->Get("noiseDistrGroup");
 
-	  noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseGroupDistr->GetRMS());
-	  noiseGroupGr->SetPointError(iRun, 0, noiseGroupDistr->GetRMSError());
+	  func = noiseGroupDistr->GetFunction("gausFit");
+
+	  // noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), noiseGroupDistr->GetRMS());
+	  // noiseGroupGr->SetPointError(iRun, 0, noiseGroupDistr->GetRMSError());
+	  noiseGroupGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
+	  noiseGroupGr->SetPointError(iRun, 0, func->GetParError(2));
 
 	  noisePairDistr = (TH1*) inFile->Get("noiseDistrPair");
 
@@ -783,7 +787,7 @@ int main(int argc, char* argv[])
 
   TMultiGraph* corrNoiseGrGsigFit = new TMultiGraph();
   corrNoiseGrGsigFit->SetName("corrNoiseGrGsigFit");
-  corrNoiseGrGsigFit->SetTitle("Gaus sigma fit vs noise group (RMS)");
+  corrNoiseGrGsigFit->SetTitle("Gaus sigma fit vs noise group (sigma fit)");
 
   double* y1;
   double* y2;
@@ -1280,9 +1284,9 @@ int main(int argc, char* argv[])
   corrWidthGsigFit->GetXaxis()->SetTitle("Landau width [ADC counts]");
   corrWidthGsigFit->GetYaxis()->SetTitle("G sigma fit function [ADC counts]");
 
-  corrNoiseGrGsigFit->Draw("AP");
+  corrNoiseGrGsigFit->Draw("APL");
   corrNoiseGrGsigFit->GetXaxis()->SetTitle("G sigma fit function [ADC counts]");
-  corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (RMS) [ADC counts]");
+  corrNoiseGrGsigFit->GetYaxis()->SetTitle("Noise group (sigma fit) [ADC counts]");
 
   normGraph->Draw("AP");
   normGraph->GetXaxis()->SetTitle("Bias [V]");
@@ -1621,7 +1625,7 @@ int main(int argc, char* argv[])
   corrWidthGsigFitAllSenCan->Write();
 
   TCanvas* corrNoiseGrGsigFitAllSenCan = new TCanvas("corrNoiseGrGsigFitAllSenCan");
-  corrNoiseGrGsigFit->Draw("AP");
+  corrNoiseGrGsigFit->Draw("APL");
   leg = corrNoiseGrGsigFitAllSenCan->BuildLegend();
   leg->SetFillColor(kWhite);
   corrNoiseGrGsigFitAllSenCan->SetGridx();
