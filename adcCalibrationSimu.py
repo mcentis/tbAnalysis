@@ -29,12 +29,13 @@ tCorr_p0 = float(confDict['tCorr_p0'])
 tCorr_p1 = float(confDict['tCorr_p1'])
 tCorr_p0Err = float(confDict['tCorr_p0Err'])
 tCorr_p1Err = float(confDict['tCorr_p1Err'])
+tCorr_p0p1Cov = float(confDict['tCorr_p0p1Cov'])
 
 targetChipTemp = float(confDict['targetChipTemp'])
 tempErr = float(confDict['tempErr'])
 
 targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp
-targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2))
+targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2) + 2 * tCorr_p0p1Cov * targetChipTemp)
 
 
 runInfo = []
@@ -90,7 +91,7 @@ for run in runInfo:
     tempDistr = inFile.Get('tempDistr')
     tempTotErr = sqrt(pow(tempErr, 2) + pow(tempDistr.GetMeanError(), 2))
     gainMeas = tCorr_p0 + tCorr_p1 * tempDistr.GetMean()
-    gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr.GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2))
+    gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr.GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2) + 2 * tCorr_p0p1Cov * tempDistr.GetMean())
     error = func.GetParameter(4) * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func.GetParError(4) / func.GetParameter(4), 2))
     errMPV = error
 
