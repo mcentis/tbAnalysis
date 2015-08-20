@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
   if(tCorr_p1 || tCorr_p0)
     {
       targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp;
-      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2)  + 2 * tCorr_p0p1Cov * targetChipTemp);
+      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2) + 2 * tCorr_p0p1Cov * targetChipTemp);
     }
   else
     {

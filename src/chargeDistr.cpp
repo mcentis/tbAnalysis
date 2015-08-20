@@ -192,6 +192,7 @@ int main(int argc, char* argv[])
   double tCorr_p1 = atof(conf->GetValue("tCorr_p1").c_str());
   double tCorr_p0Err = atof(conf->GetValue("tCorr_p0Err").c_str());
   double tCorr_p1Err = atof(conf->GetValue("tCorr_p1Err").c_str());
+  double tCorr_p0p1Cov = atof(conf->GetValue("tCorr_p0p1Cov").c_str());
   double tCorr_p2 = atof(conf->GetValue("tCorr_p2").c_str());
   double tempErr = atof(conf->GetValue("tempErr").c_str());
   double targetChipTemp = atof(conf->GetValue("targetChipTemp").c_str());
@@ -202,7 +203,7 @@ int main(int argc, char* argv[])
   if(tCorr_p0 || tCorr_p1 || tCorr_p2)
     {
       targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp + tCorr_p2 * targetChipTemp * targetChipTemp;
-      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2));
+      targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2) + 2 * tCorr_p0p1Cov * targetChipTemp);
 
       applyTcorr = true;
 
@@ -974,7 +975,7 @@ int main(int argc, char* argv[])
       if(tCorr_p1 || tCorr_p0)
 	{
 	  gainMeas = tCorr_p0 + tCorr_p1 * tempDistr->GetMean();
-	  gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr->GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2));
+	  gainMeasErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * tempDistr->GetMean(), 2) + pow(tCorr_p1 * tempTotErr, 2) + 2 * tCorr_p0p1Cov * tempDistr->GetMean());
 	}
 
       double error = fit->GetParameter(4) * sqrt(pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(fit->GetParError(4) / fit->GetParameter(4), 2));
