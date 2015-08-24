@@ -342,9 +342,9 @@ int main(int argc, char* argv[])
   sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [e^{-}];Entries", maxDist * 2 + 1);
   TH1D* noiseDistrGroup_electrons = new TH1D("noiseDistrGroup_electrons", title, 201, -100.5 * ADCtoe, 100.5 * ADCtoe);
   TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
-  TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
-  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 300, -50.5, 511.5);
-  TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 300, -50.5 * ADCtoe, 511.5 * ADCtoe);
+  TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 350, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 350, -50.5 * ADCtoe, 600.5 * ADCtoe);
   TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
   signalDistrTimeCutDistCut_noisePeakSub->SetName("signalDistrTimeCutDistCut_noisePeakSub");
   signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [ADC];Entries");
