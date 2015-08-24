@@ -44,7 +44,8 @@ thickness = 100. # [um]
 errThick = 1. # [um]
 errAngle = radians(1.) # [rad]
 
-ionMPVdict = {0:[7395, 47], 25:[8115, 49], 51:[12053, 80]}
+ionMPVdict = {0:[7005, 19], 25:[7742, 20], 51:[11590, 18]} # fitting simulation with landau gauss conv
+#ionMPVdict = {0:[7395, 47], 25:[8115, 49], 51:[12053, 80]}
 ionMeanDict = {0:[9764, 66], 25:[10640, 65], 51:[15333, 84]}
 
 with open(sys.argv[1], 'r') as runInfoFile:
