@@ -358,6 +358,8 @@ int main(int argc, char* argv[])
   TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 562, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCutDistCut_electrons = new TH1D("stripHPHDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[e^{-}];Entries", 562, -50.5 * ADCtoe, 511.5 * ADCtoe);
+  TH1D* backgroundDistrHPH_electrons = new TH1D("backgrounDistrHPH_electrons", "Backgorund distribution of the strip with highest PH;Signal [e^{-}];Entries", 562, -50.5 * ADCtoe, 511.5 * ADCtoe);
   TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 562, -50.5, 511.5);
@@ -587,6 +589,7 @@ int main(int argc, char* argv[])
 		      noiseDistrGroup->Fill(noiseSum * polarity);
 		      noiseDistrGroup_electrons->Fill(noiseSum * polarity * ADCtoe);
 		      backgroundDistrHPH->Fill(noiseHPH);
+		      backgroundDistrHPH_electrons->Fill(noiseHPH * ADCtoe);
 		      summed = 0;
 		      noiseSum = 0;
 		      noiseHPH = -1e3;
@@ -714,6 +717,7 @@ int main(int argc, char* argv[])
 		      signalDistrTimeCutDistCut->Fill(highestCharge * polarity);
 		      signalDistrTimeCutDistCut_electrons->Fill(highestCharge * polarity * ADCtoe);
 		      stripHPHDistrTimeCutDistCut->Fill(phHighestStrip);
+		      stripHPHDistrTimeCutDistCut_electrons->Fill(phHighestStrip * ADCtoe);
 		      correlationPHstripHPHhit->Fill(highestCharge * polarity, phHighestStrip);
 
 		      hitSignal.push_back(highestCharge * polarity);
@@ -1155,6 +1159,26 @@ int main(int argc, char* argv[])
     if(stripHPHDistrTimeCutDistCut_BGsub->GetBinContent(iBin) < 0)
       stripHPHDistrTimeCutDistCut_BGsub->SetBinContent(iBin, 0);
 
+  // background subtraction for the strip with highest PH in electrons
+  bgMean = backgroundDistrHPH_electrons->GetMean();
+  bgRMS = backgroundDistrHPH_electrons->GetRMS();
+  binStart = backgroundDistrHPH_electrons->GetXaxis()->FindBin(bgMean - 2 * bgRMS);
+  binStop = backgroundDistrHPH_electrons->GetXaxis()->FindBin(bgMean + 0.7 * bgRMS);
+  bgInt = backgroundDistrHPH_electrons->Integral(binStart, binStop);
+  sigPlusBgInt = stripHPHDistrTimeCutDistCut_electrons->Integral(binStart, binStop);
+  TH1D* stripHPHDistrTimeCutDistCut_BGsub_electrons = new TH1D(*stripHPHDistrTimeCutDistCut_electrons);
+  stripHPHDistrTimeCutDistCut_BGsub_electrons->SetName("stripHPHDistrTimeCutDistCut_BGsub_electrons");
+  stripHPHDistrTimeCutDistCut_BGsub_electrons->SetTitle("Signal distr strip Hi PH time cut dist cut, bg subtracted;Signal [e^{-}];Entries");
+
+  backgroundDistrHPH_electrons->Sumw2();
+  stripHPHDistrTimeCutDistCut_BGsub_electrons->Sumw2();
+  stripHPHDistrTimeCutDistCut_BGsub_electrons->Add(backgroundDistrHPH_electrons, -1 * sigPlusBgInt / bgInt);
+
+  for(int iBin = 1; iBin < stripHPHDistrTimeCutDistCut_BGsub_electrons->GetNbinsX(); iBin++) // avoid negatives
+    if(stripHPHDistrTimeCutDistCut_BGsub_electrons->GetBinContent(iBin) < 0)
+      stripHPHDistrTimeCutDistCut_BGsub_electrons->SetBinContent(iBin, 0);
+
+
   // background subtraction using fitted function
   TH1D* stripHPHDistrTimeCutDistCut_BGsub_fromFit = new TH1D(*stripHPHDistrTimeCutDistCut);
   stripHPHDistrTimeCutDistCut_BGsub_fromFit->SetName("stripHPHDistrTimeCutDistCut_BGsub_fromFit");
@@ -1176,6 +1200,21 @@ int main(int argc, char* argv[])
     {
       intBin = stripHPHDistrTimeCutDistCut_BGsub->Integral(binStart, i);
       stripHPH_BGsub_integral->SetBinContent(i, intBin / totArea);
+    }
+
+  // normalized integral from the stripHPH with cuts and bg subtraction in electrons
+  TH1D* stripHPH_BGsub_integral_electrons = new TH1D(*stripHPHDistrTimeCutDistCut_BGsub_electrons);
+  stripHPH_BGsub_integral_electrons->SetName("stripHPH_BGsub_integral_electrons");
+  stripHPH_BGsub_integral_electrons->SetTitle("Normalized integral of the strip with Hi PH, with cuts and BG subtracted;Signal [e^{-}];Integral");
+  binStart = 1;
+  binStop = stripHPHDistrTimeCutDistCut_BGsub_electrons->GetXaxis()->GetNbins();
+  totArea = stripHPHDistrTimeCutDistCut_BGsub_electrons->Integral(binStart, binStop);
+  intBin = 0;
+
+  for(int i = binStart; i < binStop + 1; ++i)
+    {
+      intBin = stripHPHDistrTimeCutDistCut_BGsub_electrons->Integral(binStart, i);
+      stripHPH_BGsub_integral_electrons->SetBinContent(i, intBin / totArea);
     }
 
   // normalized histo of the noise distribution
@@ -1344,6 +1383,10 @@ int main(int argc, char* argv[])
   stripHPHDistrTimeCutDistCut->Write();
   stripHPHDistrTimeCutDistCut_BGsub->Write();
   stripHPH_BGsub_integral->Write();
+  stripHPHDistrTimeCutDistCut_electrons->Write();
+  backgroundDistrHPH_electrons->Write();
+  stripHPHDistrTimeCutDistCut_BGsub_electrons->Write();
+  stripHPH_BGsub_integral_electrons->Write();
   stripHPHDistrTimeCutDistCut_BGsub_fromFit->Write();
   stripHPH_plusNeigh_DistrTimeCutDistCut->Write();
   stripHPHDiffExtra->Write();
