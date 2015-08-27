@@ -348,6 +348,9 @@ int main(int argc, char* argv[])
   TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
   signalDistrTimeCutDistCut_noisePeakSub->SetName("signalDistrTimeCutDistCut_noisePeakSub");
   signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [ADC];Entries");
+  TH1D* signalDistrTimeCutDistCut_noisePeakSub_electrons = new TH1D(*signalDistrTimeCutDistCut_electrons); // to preserve binning
+  signalDistrTimeCutDistCut_noisePeakSub_electrons->SetName("signalDistrTimeCutDistCut_noisePeakSub_electrons");
+  signalDistrTimeCutDistCut_noisePeakSub_electrons->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [e^{-}];Entries");
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
 
@@ -903,7 +906,7 @@ int main(int argc, char* argv[])
   fit = new TF1("gausFit", "gaus", noiseDistrGroup_electrons->GetMean() - 2 * noiseDistrGroup_electrons->GetRMS(), noiseDistrGroup_electrons->GetMean() + 1 * noiseDistrGroup_electrons->GetRMS());
   noiseDistrGroup_electrons->Fit(fit, "RQ");
 
-  /*TF1* lanGausFitFunc_electrons = */gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut_electrons, negSigmaFit, posSigmaFit,
+  TF1* lanGausFitFunc_electrons = gausLanGausFitFixGausNoise(signalDistrTimeCutDistCut_electrons, negSigmaFit, posSigmaFit,
 							     fit->GetParameter(1), fit->GetParameter(2)); // gaus mean and sigma determined from the noise distr and landau gauss convolution fitted simultaneously
 
   //lanGausFit(signalDistrTimeCut, negSigmaFit, posSigmaFit);
@@ -1086,6 +1089,17 @@ int main(int argc, char* argv[])
     }
 
   //lanGausFit(signalDistrTimeCutDistCut_noisePeakSub, negSigmaFit * 4, posSigmaFit * 5);
+
+  noiseGaus->SetParameter(0, lanGausFitFunc_electrons->GetParameter(0));
+  noiseGaus->SetParameter(1, lanGausFitFunc_electrons->GetParameter(1));
+  noiseGaus->SetParameter(2, lanGausFitFunc_electrons->GetParameter(2));
+
+  for(int iBin = 1; iBin < signalDistrTimeCutDistCut_electrons->GetNbinsX(); iBin++) // under flow and over flow bins not considered
+    {
+      cont = signalDistrTimeCutDistCut_electrons->GetBinContent(iBin) - noiseGaus->Eval(signalDistrTimeCutDistCut_electrons->GetBinCenter(iBin));
+      if(cont < 0) cont = 0; // avoid to go negative
+      signalDistrTimeCutDistCut_noisePeakSub_electrons->SetBinContent(iBin, cont);
+    }
 
   delete fitCan;
 
@@ -1318,6 +1332,7 @@ int main(int argc, char* argv[])
   signalDistrTimeCutDistCut->Write();
   signalDistrTimeCutDistCut_electrons->Write();
   signalDistrTimeCutDistCut_noisePeakSub->Write();
+  signalDistrTimeCutDistCut_noisePeakSub_electrons->Write();
   signalDistrTimeDistHPHcut->Write();
   noiseDistrTimeCut->Write();
   backgroundDistrHPH->Write();
