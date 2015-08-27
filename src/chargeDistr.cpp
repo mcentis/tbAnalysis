@@ -1151,6 +1151,10 @@ int main(int argc, char* argv[])
   stripHPHDistrTimeCutDistCut_BGsub->Sumw2();
   stripHPHDistrTimeCutDistCut_BGsub->Add(backgroundDistrHPH, -1 * sigPlusBgInt / bgInt);
 
+  for(int iBin = 1; iBin < stripHPHDistrTimeCutDistCut_BGsub->GetNbinsX(); iBin++) // avoid negatives
+    if(stripHPHDistrTimeCutDistCut_BGsub->GetBinContent(iBin) < 0)
+      stripHPHDistrTimeCutDistCut_BGsub->SetBinContent(iBin, 0);
+
   // background subtraction using fitted function
   TH1D* stripHPHDistrTimeCutDistCut_BGsub_fromFit = new TH1D(*stripHPHDistrTimeCutDistCut);
   stripHPHDistrTimeCutDistCut_BGsub_fromFit->SetName("stripHPHDistrTimeCutDistCut_BGsub_fromFit");
