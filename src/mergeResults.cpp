@@ -9,12 +9,58 @@
 #include "TH1.h"
 #include "TMath.h"
 #include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TMultiGraph.h"
 #include "TF1.h"
+#include "TSpline.h"
 #include "TLegend.h"
 #include "TCanvas.h"
 
 #include "ConfigFileReader.hh"
+
+TSpline3* sp;
+TF1* level;
+
+double toMin(double* x, double* par)
+{
+  return fabs(level->Eval(*x) - sp->Eval(*x)); 
+}
+
+struct findFracPos
+{
+  TF1* func;
+  double fracPos;
+  double errHi;
+  double errLo;
+  double deltaEntries;
+
+  findFracPos(TH1D* normInt, double frac, double totEntries)
+  {
+    sp = new TSpline3(normInt);
+    level = new TF1("level", "[0]");
+    double xmin = normInt->GetXaxis()->GetXmin();
+    double xmax = normInt->GetXaxis()->GetXmax();
+    level->SetRange(xmin, xmax);
+    level->SetParameter(0, frac);
+    func = new TF1("func", toMin, xmin, xmax, 0);
+    fracPos = func->GetMinimumX();
+    deltaEntries = sqrt(totEntries * frac * (1 - frac)); // std dev binomial
+    TH1D* inte = new TH1D(*normInt);
+    inte->Scale(totEntries);
+    delete sp;
+    sp = new TSpline3(inte);
+    level->SetParameter(0, totEntries * frac + deltaEntries);
+    errHi = func->GetMinimumX() - fracPos;
+    level->SetParameter(0, totEntries * frac - deltaEntries);
+    errLo = fracPos - func->GetMinimumX();
+    delete inte;
+  }
+
+  ~findFracPos()
+  {
+    delete func;
+  }
+};
 
 double Median(const TH1D * h1) {
   int n = h1->GetXaxis()->GetNbins(); 
@@ -162,7 +208,7 @@ int main(int argc, char* argv[])
   std::vector<TGraphErrors*> noiseGroupBiasVec;
   std::vector<TGraphErrors*> noiseGroupBiasVec_electrons;
   std::vector<TGraphErrors*> noisePairBiasVec;
-  std::vector<TGraphErrors*> eff95BiasVec;
+  std::vector<TGraphAsymmErrors*> eff95BiasVec;
   std::vector<TGraphErrors*> chargeSharingBiasVec;
   std::vector<TGraphErrors*> resYBiasVec;
   std::vector<TGraphErrors*> chipTempBiasVec;
@@ -186,7 +232,7 @@ int main(int argc, char* argv[])
   TH1* noiseDistr;
   TH1* noiseGroupDistr;
   TH1* noisePairDistr;
-  TH1* intSeedDistr;
+  TH1D* intSeedDistr;
   TH1* etaDistr;
   TH1* resYDistr;
   TH1* tempDistr;
@@ -207,7 +253,7 @@ int main(int argc, char* argv[])
   TGraphErrors* noiseGroupGr;
   TGraphErrors* noiseGroupGr_electrons;
   TGraphErrors* noisePairGr;
-  TGraphErrors* eff95Gr;
+  TGraphAsymmErrors* eff95Gr;
   TGraphErrors* chargeSharingGr;
   TGraphErrors* resYGr;
   TGraphErrors* chipTempGr;
@@ -520,7 +566,7 @@ int main(int argc, char* argv[])
 
       sprintf(name, "eff95_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
-      eff95Gr = new TGraphErrors();
+      eff95Gr = new TGraphAsymmErrors();
       eff95Gr->SetName(name);
       eff95Gr->SetTitle(title);
       eff95Gr->SetMarkerStyle(mrkStyle);
@@ -646,16 +692,6 @@ int main(int argc, char* argv[])
 	  noisePairGr->SetPoint(iRun, fabs(bias.at(iRun)), noisePairDistr->GetRMS());
 	  noisePairGr->SetPointError(iRun, 0, noisePairDistr->GetRMSError());
 
-	  intSeedDistr = (TH1*) inFile->Get("stripHPH_BGsub_integral"); // get the threshold to have 95 % efficiency
-	  for(int iBin = 1; iBin < intSeedDistr->GetNbinsX(); ++iBin)
-	    if(intSeedDistr->GetBinContent(iBin) > 0.05)
-	      {
-		eff95Gr->SetPoint(iRun, fabs(bias.at(iRun)), intSeedDistr->GetXaxis()->GetBinCenter(iBin));
-		eff95Gr->SetPointError(iRun, 0, intSeedDistr->GetXaxis()->GetBinWidth(iBin));
-
-		break;
-	      }
-
 	  //etaDistr = (TH1*) inFile->Get("etaDistrTimeCutDistCut"); // from the "clusters"
 	  etaDistr = (TH1*) inFile->Get("etaDistrTrackTimeCut"); // track based
 	  etaDistr->Sumw2();
@@ -751,6 +787,15 @@ int main(int argc, char* argv[])
 	  error = func->GetParameter(2) * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(func->GetParError(2) / func->GetParameter(2), 2));
 	  noiseGroupGr_electrons->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(2));
 	  noiseGroupGr_electrons->SetPointError(iRun, 0, error);
+
+	  intSeedDistr = (TH1D*) inFile->Get("stripHPH_BGsub_integral_electrons"); // get the threshold to have 95 % efficiency
+	  double totEntries = ((TH1*) inFile->Get("stripHPHDistrTimeCutDistCut_BGsub_electrons"))->GetEntries();
+
+	  findFracPos seedEff95(intSeedDistr, 0.05, totEntries);
+	  eff95Gr->SetPoint(iRun, fabs(bias.at(iRun)), seedEff95.fracPos);
+	  double errorUp = seedEff95.fracPos * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(seedEff95.errHi / seedEff95.fracPos, 2));
+	  double errorDown = seedEff95.fracPos * sqrt(pow(ADCtoeErr / ADCtoe, 2) + pow(targetGainErr / targetGain, 2) + pow(gainMeasErr / gainMeas, 2) + pow(seedEff95.errLo / seedEff95.fracPos, 2));
+	  eff95Gr->SetPointError(iRun, 0, 0, errorDown, errorUp);
 
 	  //inFile->Close(); // do not close the files, otherwise the canvas does not find the histos to draw and save
 	} // loop on the runs for a sensor
