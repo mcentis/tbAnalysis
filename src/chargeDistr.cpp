@@ -402,7 +402,7 @@ int main(int argc, char* argv[])
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 151, -50.5, 511.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 350, -50.5, 600.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut"); 
@@ -414,6 +414,10 @@ int main(int argc, char* argv[])
   TGraphErrors* mpvStrip_norm = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip_norm->SetName("mpvStrip_norm");
   mpvStrip_norm->SetTitle("Landau MPV various strip parts, time cut, distance cut, normalized to the 5 strips MPV");
+
+  TGraphErrors* maxDistrStrip_norm = new TGraphErrors(); // graph of the maximum of the charge distr for slices of the signalStrip
+  maxDistrStrip_norm->SetName("maxDistrStrip_norm");
+  maxDistrStrip_norm->SetTitle("Maximum of the charge distr various strip parts, time cut, distance cut, normalized to the one for 5 strips");
 
   // eta distribution
   minX = -0.5;
@@ -956,6 +960,16 @@ int main(int argc, char* argv[])
       slice->Write();
     }
 
+  // maximum of the charge distr in adc for the normalized signal maximum over the strips
+  TF1* fitMax = new TF1("fitMax", "gaus");
+  fitMax->SetRange(lanGausFitFunc->GetMaximumX() - 2 * lanGausFitFunc->GetParameter(6), lanGausFitFunc->GetMaximumX() + 2 * lanGausFitFunc->GetParameter(6));
+  fitMax->SetParameter(0, lanGausFitFunc->GetMaximum());
+  fitMax->SetParameter(2, lanGausFitFunc->GetParameter(6));
+  fitMax->SetParameter(1, lanGausFitFunc->GetMaximumX());  
+  signalDistrTimeCutDistCut->Fit(fitMax, "RQN");
+  double max5strip = fitMax->GetParameter(1);
+  double max5stripErr = fitMax->GetParError(1);
+
   TDirectory* posSlicesDir = outFile->mkdir("positionSlices");
   posSlicesDir->cd();   
 
@@ -999,6 +1013,19 @@ int main(int argc, char* argv[])
 
       mpvStrip_norm->SetPoint(mpvStrip_norm->GetN(), pos, fit->GetParameter(4) / lanGausFitFunc->GetParameter(4));
       mpvStrip_norm->SetPointError(mpvStrip_norm->GetN() - 1, binW / 2, error);
+
+      fitMax->SetRange(fit->GetMaximumX() - 2 * fit->GetParameter(6), fit->GetMaximumX() + 2 * fit->GetParameter(6));
+      fitMax->SetParameter(0, fit->GetMaximum());
+      fitMax->SetParameter(5, fit->GetParameter(6));
+      fitMax->SetParameter(1, fit->GetMaximumX());  
+      slice->Fit(fitMax, "RQN");
+      double maxSlice = fitMax->GetParameter(1);
+      double maxSliceErr = fitMax->GetParError(1);
+
+      error = maxSlice / max5strip * sqrt(pow(maxSliceErr / maxSlice, 2) + pow(max5stripErr / max5strip, 2));
+
+      maxDistrStrip_norm->SetPoint(maxDistrStrip_norm->GetN(), pos, maxSlice / max5strip);
+      maxDistrStrip_norm->SetPointError(maxDistrStrip_norm->GetN() - 1, binW / 2, error);
 
       slice->Write();
     }
@@ -1178,7 +1205,6 @@ int main(int argc, char* argv[])
     if(stripHPHDistrTimeCutDistCut_BGsub_electrons->GetBinContent(iBin) < 0)
       stripHPHDistrTimeCutDistCut_BGsub_electrons->SetBinContent(iBin, 0);
 
-
   // background subtraction using fitted function
   TH1D* stripHPHDistrTimeCutDistCut_BGsub_fromFit = new TH1D(*stripHPHDistrTimeCutDistCut);
   stripHPHDistrTimeCutDistCut_BGsub_fromFit->SetName("stripHPHDistrTimeCutDistCut_BGsub_fromFit");
@@ -1318,6 +1344,10 @@ int main(int argc, char* argv[])
   mpvStrip_norm->GetXaxis()->SetTitle("Position [AU]");
   mpvStrip_norm->GetYaxis()->SetTitle("MPV slice / MPV 5 strips");
 
+  maxDistrStrip_norm->Draw("AP");
+  maxDistrStrip_norm->GetXaxis()->SetTitle("Position [AU]");
+  maxDistrStrip_norm->GetYaxis()->SetTitle("Max distr slice / Max distr 5 strips");
+
   delete servCan;
 
   outFile->cd();
@@ -1417,6 +1447,7 @@ int main(int argc, char* argv[])
   mpvStrip->Write();
   sigmaStrip->Write();
   mpvStrip_norm->Write();
+  maxDistrStrip_norm->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
   CDFetaDistrTimeCutDistCut->Write();
