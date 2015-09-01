@@ -789,7 +789,7 @@ int main(int argc, char* argv[])
 	  noiseGroupGr_electrons->SetPointError(iRun, 0, error);
 
 	  intSeedDistr = (TH1D*) inFile->Get("stripHPH_BGsub_integral_electrons"); // get the threshold to have 95 % efficiency
-	  double totEntries = ((TH1*) inFile->Get("stripHPHDistrTimeCutDistCut_BGsub_electrons"))->GetEntries();
+	  double totEntries = ((TH1*) inFile->Get("stripHPHDistrTimeCutDistCut_BGsub_electrons"))->Integral();
 
 	  findFracPos seedEff95(intSeedDistr, 0.05, totEntries);
 	  eff95Gr->SetPoint(iRun, fabs(bias.at(iRun)), seedEff95.fracPos);
