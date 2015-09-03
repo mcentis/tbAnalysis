@@ -962,14 +962,15 @@ int main(int argc, char* argv[])
 
   // maximum of the charge distr in adc for the normalized signal maximum over the strips
   double rangeConst = 2;
-  TF1* fitMax = new TF1("fitMax", "[0] + [1] * TMath::Power([2] - x, 2)");
-  fitMax->SetRange(lanGausFitFunc->GetMaximumX() - rangeConst * lanGausFitFunc->GetParameter(6), lanGausFitFunc->GetMaximumX() + rangeConst * lanGausFitFunc->GetParameter(6));
+  //TF1* fitMax = new TF1("fitMax", "[0] + [1] * TMath::Power([2] - x, 2)");
+  TF1* fitMax = new TF1("fitMax", "gaus");
+  fitMax->SetRange(lanGausFitFunc->GetParameter(4) - rangeConst * lanGausFitFunc->GetParameter(6), lanGausFitFunc->GetParameter(4) + rangeConst * lanGausFitFunc->GetParameter(6));
   fitMax->SetParameter(0, lanGausFitFunc->GetMaximum());
-  fitMax->SetParameter(1, 0.1);
-  fitMax->SetParameter(2, lanGausFitFunc->GetMaximumX());  
+  fitMax->SetParameter(2, sqrt(pow(lanGausFitFunc->GetParameter(6), 2) + pow(lanGausFitFunc->GetParameter(3), 2)));
+  fitMax->SetParameter(1, lanGausFitFunc->GetParameter(4));  
   signalDistrTimeCutDistCut->Fit(fitMax, "RQN");
-  double max5strip = fitMax->GetParameter(2);
-  double max5stripErr = fitMax->GetParError(2);
+  double max5strip = fitMax->GetParameter(1);
+  double max5stripErr = fitMax->GetParError(1);
 
   TDirectory* posSlicesDir = outFile->mkdir("positionSlices");
   posSlicesDir->cd();   
@@ -1015,13 +1016,13 @@ int main(int argc, char* argv[])
       mpvStrip_norm->SetPoint(mpvStrip_norm->GetN(), pos, fit->GetParameter(4) / lanGausFitFunc->GetParameter(4));
       mpvStrip_norm->SetPointError(mpvStrip_norm->GetN() - 1, binW / 2, error);
 
-      fitMax->SetRange(fit->GetMaximumX() - rangeConst * fit->GetParameter(6), fit->GetMaximumX() + rangeConst * fit->GetParameter(6));
+      fitMax->SetRange(fit->GetParameter(4) - rangeConst * fit->GetParameter(6), fit->GetParameter(4) + rangeConst * fit->GetParameter(6));
       fitMax->SetParameter(0, fit->GetMaximum());
-      fitMax->SetParameter(1, 0.1);
-      fitMax->SetParameter(2, fit->GetMaximumX());  
+      fitMax->SetParameter(2, sqrt(pow(fit->GetParameter(6), 2) + pow(fit->GetParameter(3), 2)));
+      fitMax->SetParameter(1, fit->GetParameter(4));
       slice->Fit(fitMax, "RQN");
-      double maxSlice = fitMax->GetParameter(2);
-      double maxSliceErr = fitMax->GetParError(2);
+      double maxSlice = fitMax->GetParameter(1);
+      double maxSliceErr = fitMax->GetParError(1);
 
       error = maxSlice / max5strip * sqrt(pow(maxSliceErr / maxSlice, 2) + pow(max5stripErr / max5strip, 2));
 
