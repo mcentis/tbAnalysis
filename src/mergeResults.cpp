@@ -1364,7 +1364,8 @@ int main(int argc, char* argv[])
     {
       eff95BiasVec.at(i)->Draw("AP");
       eff95BiasVec.at(i)->GetXaxis()->SetTitle("Bias [V]");
-      eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
+      //eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
+      eff95BiasVec.at(i)->GetYaxis()->SetTitle("Threshold 95% eff [e^{-}]");
 
       eff95AllSensors->Add(eff95BiasVec.at(i));
     }
@@ -1372,7 +1373,8 @@ int main(int argc, char* argv[])
   eff95AllSensors->Draw("AP");
   eff95AllSensors->GetXaxis()->SetTitle("Bias [V]");
   eff95AllSensors->GetXaxis()->SetLimits(xmin, xmax);
-  eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
+  //eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [ADC counts]");
+  eff95AllSensors->GetYaxis()->SetTitle("Threshold 95% eff [e^{-}]");
 
   for(unsigned int i = 0; i < chargeSharingBiasVec.size(); ++i) // loop on the graphs
     {
