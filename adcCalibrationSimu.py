@@ -2,6 +2,8 @@ from ROOT import *
 import sys
 from math import *
 
+#gStyle.SetOptFit(0)
+
 if len(sys.argv) != 4:
     print '\tUsage: python adcCalibration runList directory confFile'
     sys.exit(1)

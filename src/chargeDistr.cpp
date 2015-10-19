@@ -1,4 +1,5 @@
 #include "iostream"
+#include "fstream"
 #include "stdlib.h"
 #include "string"
 #include "vector"
@@ -402,7 +403,7 @@ int main(int argc, char* argv[])
   TH2D* hitMap = new TH2D("hitMap", "Hit map in the time cut, distance cut;x [mm];y [mm];Charge [ADC]", binX, minX, maxX, binY, minY, maxY);
 
   // 2d histo to study signal in different parts of the strip
-  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [AU];Signal [ADC]", 5, 0, 1, 350, -50.5, 600.5);
+  TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [#mum];Signal [ADC counts]", 6, 0, 80, 350, -50.5, 400.5);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
   mpvStrip->SetTitle("Landau MPV various strip parts, time cut, distance cut"); 
@@ -418,6 +419,10 @@ int main(int argc, char* argv[])
   TGraphErrors* maxDistrStrip_norm = new TGraphErrors(); // graph of the maximum of the charge distr for slices of the signalStrip
   maxDistrStrip_norm->SetName("maxDistrStrip_norm");
   maxDistrStrip_norm->SetTitle("Maximum of the charge distr various strip parts, time cut, distance cut, normalized to the one for 5 strips");
+
+  TGraphErrors* maxDistrStrip = new TGraphErrors(); // graph of the maximum of the charge distr for slices of the signalStrip
+  maxDistrStrip->SetName("maxDistrStrip");
+  maxDistrStrip->SetTitle("Maximum of the charge distr various strip parts, time cut, distance cut");
 
   // eta distribution
   minX = -0.5;
@@ -777,7 +782,8 @@ int main(int argc, char* argv[])
 		  etaTrackVsPos->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), phR / (phR + phL));
 
 		  if(abs(hiChargeCh - highestPHstrip) <= 1) // the strip with the highest PH is neighboring the hit one
-		    signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), (phL + phR) * polarity); //distance cut for this guy
+		    signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart) * 80, (phL + phR) * polarity); //distance cut for this guy
+		    //signalStrip->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1] + 19./160., intPart), (phL + phR) * polarity); //distance cut for this guy, the 19/160 is to shift the strip position to have the implant in one bin
 
 		  // output for test
 		  // modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart);
@@ -961,10 +967,11 @@ int main(int argc, char* argv[])
     }
 
   // maximum of the charge distr in adc for the normalized signal maximum over the strips
-  double rangeConst = 2;
+  double rangeConstNeg = 1.8;
+  double rangeConstPos = 2.5;
   //TF1* fitMax = new TF1("fitMax", "[0] + [1] * TMath::Power([2] - x, 2)");
   TF1* fitMax = new TF1("fitMax", "gaus");
-  fitMax->SetRange(lanGausFitFunc->GetParameter(4) - rangeConst * lanGausFitFunc->GetParameter(6), lanGausFitFunc->GetParameter(4) + rangeConst * lanGausFitFunc->GetParameter(6));
+  fitMax->SetRange(lanGausFitFunc->GetParameter(4) - rangeConstNeg * lanGausFitFunc->GetParameter(6), lanGausFitFunc->GetParameter(4) + rangeConstPos * lanGausFitFunc->GetParameter(6));
   fitMax->SetParameter(0, lanGausFitFunc->GetMaximum());
   fitMax->SetParameter(2, sqrt(pow(lanGausFitFunc->GetParameter(6), 2) + pow(lanGausFitFunc->GetParameter(3), 2)));
   fitMax->SetParameter(1, lanGausFitFunc->GetParameter(4));  
@@ -977,15 +984,19 @@ int main(int argc, char* argv[])
 
   nBins = signalStrip->GetXaxis()->GetNbins();
   double pos;
-  for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions in various strip positions
+  //for(int iBin = 1; iBin <= nBins; ++iBin) // fit the signal distributions in various strip positions
+  for(int iBin = 1; iBin <= nBins / 2; ++iBin) // fit the signal distributions in various strip positions
     {
-      pos = signalStrip->GetXaxis()->GetBinCenter(iBin);
+      pos = signalStrip->GetXaxis()->GetBinCenter(iBin);// - 8.;// - 19./2.
       binW = signalStrip->GetXaxis()->GetBinWidth(iBin);
 
       sprintf(name, "posSlice_%f", pos);
       sprintf(title, "Hit charge distribution (positivized) at position %f;Hit charge [ADC];Entries", pos);
 
       slice = signalStrip->ProjectionY(name, iBin, iBin);
+      slice->Sumw2();
+      slice->Add(signalStrip->ProjectionY(name, nBins - iBin + 1, nBins - iBin + 1)); // add symmetric bin to increase statistics
+      slice->Sumw2();
       slice->SetTitle(title);
 
       // use noise from pair strip, since the charge is now summed from 2 strips
@@ -1016,11 +1027,14 @@ int main(int argc, char* argv[])
       mpvStrip_norm->SetPoint(mpvStrip_norm->GetN(), pos, fit->GetParameter(4) / lanGausFitFunc->GetParameter(4));
       mpvStrip_norm->SetPointError(mpvStrip_norm->GetN() - 1, binW / 2, error);
 
-      fitMax->SetRange(fit->GetParameter(4) - rangeConst * fit->GetParameter(6), fit->GetParameter(4) + rangeConst * fit->GetParameter(6));
+      fitMax->SetRange(fit->GetParameter(4) - rangeConstNeg * fit->GetParameter(6), fit->GetParameter(4) + rangeConstPos * fit->GetParameter(6));
+      //double maxPos = slice->GetXaxis()->GetBinCenter(slice->GetMaximumBin());
+      // fitMax->SetRange(maxPos - rangeConstNeg * slice->GetRMS(), maxPos + rangeConstPos * slice->GetRMS());
+
       fitMax->SetParameter(0, fit->GetMaximum());
       fitMax->SetParameter(2, sqrt(pow(fit->GetParameter(6), 2) + pow(fit->GetParameter(3), 2)));
       fitMax->SetParameter(1, fit->GetParameter(4));
-      slice->Fit(fitMax, "RQN");
+      slice->Fit(fitMax, "RQ");
       double maxSlice = fitMax->GetParameter(1);
       double maxSliceErr = fitMax->GetParError(1);
 
@@ -1028,6 +1042,10 @@ int main(int argc, char* argv[])
 
       maxDistrStrip_norm->SetPoint(maxDistrStrip_norm->GetN(), pos, maxSlice / max5strip);
       maxDistrStrip_norm->SetPointError(maxDistrStrip_norm->GetN() - 1, binW / 2, error);
+
+      maxDistrStrip->SetPoint(maxDistrStrip->GetN(), pos, maxSlice);
+      maxDistrStrip->SetPointError(maxDistrStrip->GetN() - 1, binW / 2, maxSliceErr);
+      //maxDistrStrip->SetPointError(maxDistrStrip->GetN() - 1, 0, maxSliceErr);
 
       slice->Write();
     }
@@ -1350,6 +1368,10 @@ int main(int argc, char* argv[])
   maxDistrStrip_norm->GetXaxis()->SetTitle("Position [AU]");
   maxDistrStrip_norm->GetYaxis()->SetTitle("Max distr slice / Max distr 5 strips");
 
+  maxDistrStrip->Draw("AP");
+  maxDistrStrip->GetXaxis()->SetTitle("Position [A.U.]");
+  maxDistrStrip->GetYaxis()->SetTitle("Max distr slice [ADC counts]");
+
   delete servCan;
 
   outFile->cd();
@@ -1450,6 +1472,7 @@ int main(int argc, char* argv[])
   sigmaStrip->Write();
   mpvStrip_norm->Write();
   maxDistrStrip_norm->Write();
+  maxDistrStrip->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
   CDFetaDistrTimeCutDistCut->Write();
@@ -1479,6 +1502,19 @@ int main(int argc, char* argv[])
   fittedNoiseDistr_electrons->Write();
 
   outFile->Close();
+  /*
+  sprintf(name, "chargeBetweenStripsRun_%i.dat", findRunNumber(argv[1]));
+  std::ofstream outGr(name, std::ofstream::out);
+  int np = maxDistrStrip->GetN();
+  double* x = maxDistrStrip->GetX();
+  double* y = maxDistrStrip->GetY();
+  double* Ex = maxDistrStrip->GetEX();
+  double* Ey = maxDistrStrip->GetEY();
 
+  for(int i = 0; i < np; ++i)
+    outGr << x[i] << ' ' << y[i] << ' ' << Ex[i] << ' ' << Ey[i] << '\n';
+
+  outGr.close();
+  */
   return 0;
 }
