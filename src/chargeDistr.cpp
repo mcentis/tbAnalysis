@@ -123,8 +123,8 @@ TF1* fitPeak(TH1* hist, double negSig, double posSig)
 
   TCanvas* fitCan = new TCanvas("fitCa"); // it is important that the canvases have different names, strange root...
 
-  TSpectrum* spec = new TSpectrum(4, 1); // find the peaks (max 4) in the histo  
-  int nPeaks = spec->Search(hist, 15); // sigma peak = 15
+  TSpectrum* spec = new TSpectrum(10, 5); // find the peaks (max 4) in the histo  
+  int nPeaks = spec->Search(hist, 3, "nobackground new"); // sigma peak = 15, no backgrund considered
 
   Double_t* pos = spec->GetPositionX();
   Double_t* heigth = spec->GetPositionY();
@@ -133,7 +133,7 @@ TF1* fitPeak(TH1* hist, double negSig, double posSig)
   double startHeigth = -1;
   for(int i = 0; i < nPeaks; ++i)
     {
-      if(heigth[i] < 5) continue;
+      if(heigth[i] < 10) continue;
       if(pos[i] > maxPos)
 	{
 	  maxPos = pos[i];
@@ -144,7 +144,7 @@ TF1* fitPeak(TH1* hist, double negSig, double posSig)
   fitFunc->SetParameter(0, startHeigth);
   fitFunc->SetParameter(1, maxPos);
 
-  fitFunc->SetParameter(2, 20);
+  fitFunc->SetParameter(2, 15);
   double start = maxPos - 20;
   double stop = maxPos + 20;
   fitFunc->SetRange(start, stop);
@@ -459,7 +459,8 @@ int main(int argc, char* argv[])
   binX = 5;
   minY = -50.5;
   maxY = 400.5;
-  binY = 350;
+  //  binY = 350;
+  binY = 150;
   TH2D* signalStrip = new TH2D("signalStrip", "Signal in various strip parts (2 strips surrounding the hit position), time cut, dist cut;Position in the strip [#mum];Signal [ADC counts]", binX, minX, maxX, binY, minY, maxY);
   TGraphErrors* mpvStrip = new TGraphErrors(); // graph of the landau mpv for slices of the signalStrip
   mpvStrip->SetName("mpvStrip");
