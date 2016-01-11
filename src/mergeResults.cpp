@@ -192,6 +192,7 @@ int main(int argc, char* argv[])
       sensorThickness.push_back(str);
     }
 
+  std::vector<TGraphErrors*> noisePeakBiasVec;
   std::vector<TGraphErrors*> medianBiasVec;
   std::vector<TGraphErrors*> meanBiasVec;
   std::vector<TGraphErrors*> maxFitBiasVec;
@@ -237,6 +238,7 @@ int main(int argc, char* argv[])
   TH1* resYDistr;
   TH1* tempDistr;
   TDirectory* resDir;
+  TGraphErrors* noisePeakGr;
   TGraphErrors* medianGr;
   TGraphErrors* meanGr;
   TGraphErrors* maxFitGr;
@@ -407,6 +409,18 @@ int main(int argc, char* argv[])
       meanGr->SetLineWidth(linWidth);
       meanGr->SetMarkerColor(iColor);
       meanGr->SetLineStyle(linStyle);
+
+      sprintf(name, "noisePeak_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
+      sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
+      noisePeakGr = new TGraphErrors();
+      noisePeakGr->SetName(name);
+      noisePeakGr->SetTitle(title);
+      noisePeakGr->SetMarkerStyle(mrkStyle);
+      noisePeakGr->SetFillColor(kWhite);
+      noisePeakGr->SetLineColor(iColor); // set line color and style
+      noisePeakGr->SetLineWidth(linWidth);
+      noisePeakGr->SetMarkerColor(iColor);
+      noisePeakGr->SetLineStyle(linStyle);
 
       sprintf(name, "median_%s_%.01e", sensorType.at(i).c_str(), fluences.at(i));
       sprintf(title, "%s %s %s %.01e cm^{-2}", sensorMaterial.at(i).c_str(), sensorThickness.at(i).c_str(), sensorLabel.at(i).c_str(), fluences.at(i));
@@ -653,6 +667,9 @@ int main(int argc, char* argv[])
 	  mpvGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(4));
 	  mpvGr->SetPointError(iRun, 0, func->GetParError(4));
 
+	  noisePeakGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(0));
+	  noisePeakGr->SetPointError(iRun, 0, func->GetParError(0));
+
 	  maxFitGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetMaximumX());
 
 	  lanWGr->SetPoint(iRun, fabs(bias.at(iRun)), func->GetParameter(3));
@@ -804,6 +821,7 @@ int main(int argc, char* argv[])
       mpvBiasVec.push_back(mpvGr);
       mpvBiasVec_electrons.push_back(mpvGr_electrons);
       meanBiasVec.push_back(meanGr);
+      noisePeakBiasVec.push_back(noisePeakGr);
       medianBiasVec.push_back(medianGr);
       maxFitBiasVec.push_back(maxFitGr);
       lanWBiasVec.push_back(lanWGr);
@@ -1074,6 +1092,10 @@ int main(int argc, char* argv[])
   medianAllSensors->SetName("medianAllSensors");
   medianAllSensors->SetTitle("Median of the charge distribution (noise sub)");
 
+  TMultiGraph* noisePeakAllSensors = new TMultiGraph();
+  noisePeakAllSensors->SetName("noisePeakAllSensors");
+  noisePeakAllSensors->SetTitle("Height of the noise peak at 0");
+
   TMultiGraph* maxFitAllSensors = new TMultiGraph();
   maxFitAllSensors->SetName("maxFitAllSensors");
   maxFitAllSensors->SetTitle("Maximum of the fit function");
@@ -1206,6 +1228,14 @@ int main(int argc, char* argv[])
   medianAllSensors->GetXaxis()->SetTitle("Bias [V]");
   medianAllSensors->GetXaxis()->SetLimits(xmin, xmax);
   medianAllSensors->GetYaxis()->SetTitle("Median [ADC counts]");
+
+  for(unsigned int i = 0; i < noisePeakBiasVec.size(); ++i) // loop on the graphs
+    noisePeakAllSensors->Add(noisePeakBiasVec.at(i));
+
+  noisePeakAllSensors->Draw("AP");
+  noisePeakAllSensors->GetXaxis()->SetTitle("Bias [V]");
+  noisePeakAllSensors->GetXaxis()->SetLimits(xmin, xmax);
+  noisePeakAllSensors->GetYaxis()->SetTitle("Noise peak height [entries]");
 
   for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
     {
@@ -1531,6 +1561,17 @@ int main(int argc, char* argv[])
   medianAllSenCan->Modified();
   medianAllSenCan->Update();
   medianAllSenCan->Write();
+
+  noisePeakAllSensors->Write();
+
+  TCanvas* noisePeakAllSenCan = new TCanvas("noisePeakAllSenCan");
+  noisePeakAllSensors->Draw("APL");
+  legend->Draw();
+  noisePeakAllSenCan->SetGridx();
+  noisePeakAllSenCan->SetGridy();
+  noisePeakAllSenCan->Modified();
+  noisePeakAllSenCan->Update();
+  noisePeakAllSenCan->Write();
 
   // for(unsigned int i = 0; i < maxFitBiasVec.size(); ++i) // loop on the graphs
   //   maxFitBiasVec.at(i)->Write();
