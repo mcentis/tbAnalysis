@@ -395,6 +395,7 @@ int main(int argc, char* argv[])
   TH1D* noiseDistrGroup_electrons = new TH1D("noiseDistrGroup_electrons", title, 201, -100.5 * ADCtoe, 100.5 * ADCtoe);
   TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
   TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCutEta01 = new TH1D("signalDistrTimeCutDistCutEta01", "Hit signal distribution (positivized), time cut, dist cut, #eta > 1 or #eta < 0;Hit signal[ADC];Entries", 562, -50.5, 600.5);
   TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 350, -50.5, 600.5);
   TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 350, -50.5 * ADCtoe, 600.5 * ADCtoe);
   TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
@@ -517,6 +518,7 @@ int main(int argc, char* argv[])
   TH1D* CDFetaDistrTimeCutDistCut = new TH1D("CDFetaDistrTimeCutDistCut", "CDF #eta distribution in the time cut, dist cut;#eta;#int #eta", binX, minX, maxX);
   TH1D* etaDistrTrackTimeCut = new TH1D("etaDistrTrackTimeCut", "Track based #eta distribution in the time cut;#eta;Entries", binX, minX, maxX);
   TH1D* CDFetaDistrTrackTimeCut = new TH1D("CDFetaDistrTrackTimeCut", "CDF track based #eta distribution in the time cut;#eta;#int #eta", binX, minX, maxX);
+  TH1D* etaDistrTrackTimeCutLowPH = new TH1D("etaDistrTrackTimeCutLowPH", "Track based #eta distribution in the time cut, PH < 15 ADC;#eta;Entries", binX, minX, maxX);
 
   // scatter plot eta
   TH2D* etaClustVsPos = new TH2D("etaClustVsPos", "Cluster #eta vs reduced track position;Position in the strip [AU];#eta cluster", 50, 0, 1, binX, minX, maxX);
@@ -866,6 +868,10 @@ int main(int argc, char* argv[])
 
 		  etaDistrTrackTimeCut->Fill(phR / (phR + phL));
 
+		  if(phR / (phR + phL) > 1 || phR / (phR + phL) < 0) // events outside expected eta
+		    if(abs(hiChargeCh - highestPHstrip) <= 1) // dist cut
+		      signalDistrTimeCutDistCutEta01->Fill(highestCharge * polarity);
+
 		  etaTrackVsPos->Fill(modf(trkVec.at(trackPos).extraPosDUT_pixel[1], intPart), phR / (phR + phL));
 
 		  if(abs(hiChargeCh - highestPHstrip) <= 1) // the strip with the highest PH is neighboring the hit one
@@ -896,6 +902,7 @@ int main(int argc, char* argv[])
 		      hitMapLowPH->Fill(trkVec.at(trackPos).extraPosDUT_global[0], trkVec.at(trackPos).extraPosDUT_global[1]);
 		      trkEvtLowPH->Fill(trkVec.size());
 		      stripHPHDiffExtraLowPH->Fill(hiChargeCh - highestPHstrip);
+		      etaDistrTrackTimeCutLowPH->Fill(phR / (phR + phL));
 		    }
 		  diffExtraStripHPHvsPH->Fill(highestCharge * polarity, hiChargeCh - highestPHstrip);
 
@@ -1611,6 +1618,7 @@ int main(int argc, char* argv[])
   signalDistrTimeCut->Write();
   signalDistrTimeCutDistCut->Write();
   signalDistrTimeCutDistCut_electrons->Write();
+  signalDistrTimeCutDistCutEta01->Write();
   signalDistrTimeCutDistCut_noisePeakSub->Write();
   signalDistrTimeCutDistCut_noisePeakSub_electrons->Write();
   signalDistrTimeDistHPHcut->Write();
@@ -1668,6 +1676,7 @@ int main(int argc, char* argv[])
   sigLRcan->Write();
   etaDistrTimeCutDistCut->Write();
   etaDistrTrackTimeCut->Write();
+  etaDistrTrackTimeCutLowPH->Write();
   CDFetaDistrTimeCutDistCut->Write();
   CDFetaDistrTrackTimeCut->Write();
   etaClustVsPos->Write();
