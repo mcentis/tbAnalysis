@@ -13,9 +13,11 @@
 #include "TAxis.h"
 #include "TGraph.h"
 #include "TGraphErrors.h"
+#include "TGraphAsymmErrors.h"
 #include "TString.h"
 #include "TProfile.h"
 #include "TSpectrum.h"
+#include "TSpline.h"
 #include "TLegend.h"
 #include "TMultiGraph.h"
 
@@ -158,6 +160,69 @@ TF1* fitPeak(TH1* hist, double negSig, double posSig)
   delete fitCan;
 
   return fitFunc;
+}
+
+// global variables to be used in the findfracpos
+TSpline3* sp;
+TF1* level;
+
+double toMin(double* x, double* par)
+{
+  return fabs(level->Eval(*x) - sp->Eval(*x)); 
+}
+
+struct findFracPos // different from the one in mergeresults
+{
+  TF1* func;
+  double fracPos;
+  double errHi;
+  double errLo;
+  double deltaEntries;
+
+  findFracPos(TH1D* inHist, double frac)
+  {
+    TH1D* inte = new TH1D(*inHist); // CDF histogram
+    int binStart = 1;
+    int binStop = inHist->GetXaxis()->GetNbins();
+    double totArea = inHist->Integral(binStart, binStop);
+    double intBin = 0;
+
+    for(int i = binStart; i < binStop + 1; ++i)
+      {
+	intBin = inHist->Integral(binStart, i);
+	inte->SetBinContent(i, intBin);
+      }
+
+    sp = new TSpline3(inte); // sp is a global variable
+    level = new TF1("level", "[0]");
+    double xmin = inte->GetXaxis()->GetXmin();
+    double xmax = inte->GetXaxis()->GetXmax();
+    level->SetRange(xmin, xmax);
+    level->SetParameter(0, frac * totArea);
+    func = new TF1("func", toMin, xmin, xmax, 0);
+    fracPos = func->GetMinimumX();
+    deltaEntries = sqrt(totArea * frac * (1 - frac)); // std dev binomial
+    level->SetParameter(0, totArea * frac + deltaEntries);
+    errHi = func->GetMinimumX() - fracPos;
+    level->SetParameter(0, totArea * frac - deltaEntries);
+    errLo = fracPos - func->GetMinimumX();
+    delete sp;
+    delete inte;
+  }
+
+  ~findFracPos()
+  {
+    delete func;
+  }
+};
+
+double Median(const TH1D * h1) {
+  int n = h1->GetXaxis()->GetNbins(); 
+  std::vector<double>  x(n);
+  h1->GetXaxis()->GetCenter( &x[0] );
+  const double * y = h1->GetArray();
+  // exclude underflow/overflows from bin content array y
+  return TMath::Median(n, &x[0], &y[1]);
 }
 
 int main(int argc, char* argv[])
@@ -457,7 +522,7 @@ int main(int argc, char* argv[])
   // 2d histo to study signal in different parts of the strip
   minX = 0;
   maxX = 80;
-  binX = 5;
+  binX = 4; // normally 5
   minY = -50.5;
   maxY = 400.5;
   //  binY = 350;
@@ -483,6 +548,10 @@ int main(int argc, char* argv[])
   maxDistrStrip->SetName("maxDistrStrip");
   //maxDistrStrip->SetTitle("Maximum of the charge distr various strip parts, time cut, distance cut");
   maxDistrStrip->SetTitle("Sum signal L+R");
+
+  TGraphAsymmErrors* medianDistrStrip = new TGraphAsymmErrors(); // graph of the median of the charge distr for slices of the signalStrip
+  medianDistrStrip->SetName("medianDistrStrip");
+  medianDistrStrip->SetTitle("Sum signal L+R");
 
   // single contributions of the 4 strips surrounding the hit point
   TH2D* signalStripL = new TH2D("signalStripL", "Signal on Left strip, dist cut;Position in the strip [#mum];Signal [ADC counts]", binX, minX, maxX, binY, minY, maxY);
@@ -1147,6 +1216,10 @@ int main(int argc, char* argv[])
       maxDistrStrip->SetPointError(maxDistrStrip->GetN() - 1, binW / 2, maxSliceErr);
       //maxDistrStrip->SetPointError(maxDistrStrip->GetN() - 1, 0, maxSliceErr);
 
+      findFracPos med(slice, 0.5);
+      medianDistrStrip->SetPoint(medianDistrStrip->GetN(), pos, med.fracPos);
+      medianDistrStrip->SetPointError(medianDistrStrip->GetN() - 1, binW / 2, binW / 2, med.errLo, med.errHi);
+
       slice->Write();
     }
 
@@ -1536,6 +1609,10 @@ int main(int argc, char* argv[])
   maxDistrStrip->GetXaxis()->SetTitle("Position [#mum]");
   maxDistrStrip->GetYaxis()->SetTitle("Max distr slice [ADC counts]");
 
+  medianDistrStrip->Draw("AP");
+  medianDistrStrip->GetXaxis()->SetTitle("Position [#mum]");
+  medianDistrStrip->GetYaxis()->SetTitle("Median distr slice [ADC counts]");
+
   maxDistrStripL->Draw("AP");
   maxDistrStripL->GetXaxis()->SetTitle("Position [#mum]");
   maxDistrStripL->GetYaxis()->SetTitle("Max distr slice [ADC counts]");
@@ -1668,6 +1745,7 @@ int main(int argc, char* argv[])
   mpvStrip_norm->Write();
   maxDistrStrip_norm->Write();
   maxDistrStrip->Write();
+  medianDistrStrip->Write();
   maxDistrStripL->Write();
   maxDistrStripR->Write();
   maxDistrStripLp1->Write();
