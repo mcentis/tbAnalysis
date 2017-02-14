@@ -39,7 +39,6 @@ tempErr = float(confDict['tempErr'])
 targetGain = tCorr_p0 + tCorr_p1 * targetChipTemp
 targetGainErr = sqrt(pow(tCorr_p0Err, 2) + pow(tCorr_p1Err * targetChipTemp, 2) + 2 * tCorr_p0p1Cov * targetChipTemp)
 
-
 runInfo = []
 
 thickness = 100. # [um]

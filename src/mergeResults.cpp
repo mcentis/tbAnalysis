@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
   gStyle->SetTitleOffset(0.95, "x");
   gStyle->SetTitleOffset(0.95, "y");
 
-  gStyle->SetMarkerSize(2);
+  gStyle->SetMarkerSize(3);
   // gStyle->SetLineWidth(1);
 
   char fileName[200];
@@ -1505,26 +1505,27 @@ int main(int argc, char* argv[])
 */
   // next legend attempt
   TLegend* legend = new TLegend(0.77, 0.21, 1, 0.8);
+  legend->SetName("theLegend");
   legend->SetLineColor(kWhite);
   legend->SetFillColor(kWhite);
-  TGraph* epiLeg = new TGraph(); epiLeg->SetMarkerStyle(20); epiLeg->SetMarkerSize(2); epiLeg->SetLineWidth(1);
+  TGraph* epiLeg = new TGraph(); epiLeg->SetMarkerStyle(20); epiLeg->SetMarkerSize(3); epiLeg->SetLineWidth(1);
   legend->AddEntry(epiLeg, "Epi 100 #mum", "PL");
-  TGraph* mczLeg = new TGraph(); mczLeg->SetMarkerStyle(22); mczLeg->SetMarkerSize(2); mczLeg->SetLineWidth(2);
+  TGraph* mczLeg = new TGraph(); mczLeg->SetMarkerStyle(22); mczLeg->SetMarkerSize(3); mczLeg->SetLineWidth(2);
   legend->AddEntry(mczLeg, "MCz 200 #mum", "PL");
-  TGraph* fthLeg = new TGraph(); fthLeg->SetMarkerStyle(21); fthLeg->SetMarkerSize(2); fthLeg->SetLineWidth(2);
-  legend->AddEntry(fthLeg, "Fth 200 #mum", "PL");
+  TGraph* fthLeg = new TGraph(); fthLeg->SetMarkerStyle(21); fthLeg->SetMarkerSize(3); fthLeg->SetLineWidth(2);
+  legend->AddEntry(fthLeg, "FZ 200 #mum", "PL");
   legend->AddEntry((TObject*) NULL, "P-stop open symbols", "");
   legend->AddEntry((TObject*) NULL, "P-spray full symbols", "");
   TGraph* f0 = new TGraph(); f0->SetLineColor(kRed); f0->SetLineStyle(2);
-  legend->AddEntry(f0, "0 cm^{-2}", "L");
+  legend->AddEntry(f0, "#Phi_{eq} = 0 cm^{-2}", "L");
   TGraph* f1e15 = new TGraph(); f1e15->SetLineColor(kGreen);
-  legend->AddEntry(f1e15, "1 10^{15} cm^{-2}", "L");
+  legend->AddEntry(f1e15, "#Phi_{eq} = 1 #upoint 10^{15} cm^{-2}", "L");
   TGraph* f15e14 = new TGraph(); f15e14->SetLineColor(kBlack);
-  legend->AddEntry(f15e14, "1.5 10^{15} cm^{-2}", "L");
+  legend->AddEntry(f15e14, "#Phi_{eq} = 1.5 #upoint 10^{15} cm^{-2}", "L");
   TGraph* f3e15 = new TGraph(); f3e15->SetLineColor(kBlue);
-  legend->AddEntry(f3e15, "3 10^{15} cm^{-2}", "L");
+  legend->AddEntry(f3e15, "#Phi_{eq} = 3 #upoint 10^{15} cm^{-2}", "L");
   TGraph* f13e15 = new TGraph(); f13e15->SetLineColor(kRed);
-  legend->AddEntry(f13e15, "1.3 10^{16} cm^{-2}", "L");
+  legend->AddEntry(f13e15, "#Phi_{eq} = 1.3 #upoint 10^{16} cm^{-2}", "L");
 
   TCanvas* mpvAllSenCan = new TCanvas("mpvAllSenCan");
   mpvAllSensors->Draw("APL");

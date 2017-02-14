@@ -20,7 +20,8 @@ do
 	    runNum=${runNum%%-*} # extract run number (what comes before the first -)
 	    echo $runNum
 
-	    newFile=$unsDir/$runNum-alibava-tracking-3.root # line with fixed name!!!!!!!!!
+	    #newFile=$unsDir/$runNum-alibava-tracking-3.root # line with fixed name!!!!!!!!!
+	    newFile=$unsDir/$runNum-alibava-tracking-gbl.root # line with fixed name!!!!!!!!!
 	    echo $newFile
 	    if [ -e $newFile ]
 	    then
