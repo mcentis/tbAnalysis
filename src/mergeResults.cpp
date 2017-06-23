@@ -118,7 +118,9 @@ int main(int argc, char* argv[])
   gStyle->SetTitleOffset(0.95, "x");
   gStyle->SetTitleOffset(0.95, "y");
 
-  gStyle->SetMarkerSize(3);
+  float mrkSize = 5;
+  
+  gStyle->SetMarkerSize(mrkSize);
   // gStyle->SetLineWidth(1);
 
   char fileName[200];
@@ -1508,11 +1510,11 @@ int main(int argc, char* argv[])
   legend->SetName("theLegend");
   legend->SetLineColor(kWhite);
   legend->SetFillColor(kWhite);
-  TGraph* epiLeg = new TGraph(); epiLeg->SetMarkerStyle(20); epiLeg->SetMarkerSize(3); epiLeg->SetLineWidth(1);
+  TGraph* epiLeg = new TGraph(); epiLeg->SetMarkerStyle(20); epiLeg->SetMarkerSize(mrkSize); epiLeg->SetLineWidth(1);
   legend->AddEntry(epiLeg, "Epi 100 #mum", "PL");
-  TGraph* mczLeg = new TGraph(); mczLeg->SetMarkerStyle(22); mczLeg->SetMarkerSize(3); mczLeg->SetLineWidth(2);
+  TGraph* mczLeg = new TGraph(); mczLeg->SetMarkerStyle(22); mczLeg->SetMarkerSize(mrkSize); mczLeg->SetLineWidth(2);
   legend->AddEntry(mczLeg, "MCz 200 #mum", "PL");
-  TGraph* fthLeg = new TGraph(); fthLeg->SetMarkerStyle(21); fthLeg->SetMarkerSize(3); fthLeg->SetLineWidth(2);
+  TGraph* fthLeg = new TGraph(); fthLeg->SetMarkerStyle(21); fthLeg->SetMarkerSize(mrkSize); fthLeg->SetLineWidth(2);
   legend->AddEntry(fthLeg, "FZ 200 #mum", "PL");
   legend->AddEntry((TObject*) NULL, "P-stop open symbols", "");
   legend->AddEntry((TObject*) NULL, "P-spray full symbols", "");
