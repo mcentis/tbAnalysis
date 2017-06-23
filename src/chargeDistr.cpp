@@ -459,10 +459,11 @@ int main(int argc, char* argv[])
   sprintf(title, "Signal distribution (positivized) not associated with a hit, summed over %i channels ;Signal [e^{-}];Entries", maxDist * 2 + 1);
   TH1D* noiseDistrGroup_electrons = new TH1D("noiseDistrGroup_electrons", title, 201, -100.5 * ADCtoe, 100.5 * ADCtoe);
   TH1D* noiseDistrPair = new TH1D("noiseDistrPair", "Signal distribution (positivized) not associated with a hit, summed over 2 channels ;Signal [ADC];Entries", 201, -100.5, 100.5);
-  TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 562, -50.5, 600.5);
-  TH1D* signalDistrTimeCutDistCutEta01 = new TH1D("signalDistrTimeCutDistCutEta01", "Hit signal distribution (positivized), time cut, dist cut, #eta > 1 or #eta < 0;Hit signal[ADC];Entries", 562, -50.5, 600.5);
-  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 350, -50.5, 600.5);
-  TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 350, -50.5 * ADCtoe, 600.5 * ADCtoe);
+
+  TH1D* signalDistrTimeCut = new TH1D("signalDistrTimeCut", "Hit signal distribution (positivized) in the time cut;Hit signal[ADC];Entries", 500, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCutEta01 = new TH1D("signalDistrTimeCutDistCutEta01", "Hit signal distribution (positivized), time cut, dist cut, #eta > 1 or #eta < 0;Hit signal[ADC];Entries", 500, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCut = new TH1D("signalDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [ADC];Entries", 200, -50.5, 600.5);
+  TH1D* signalDistrTimeCutDistCut_electrons = new TH1D("signalDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one;Hit signal [e^{-}];Entries", 200, -50.5 * ADCtoe, 600.5 * ADCtoe);
   TH1D* signalDistrTimeCutDistCut_noisePeakSub = new TH1D(*signalDistrTimeCutDistCut); // to preserve binning
   signalDistrTimeCutDistCut_noisePeakSub->SetName("signalDistrTimeCutDistCut_noisePeakSub");
   signalDistrTimeCutDistCut_noisePeakSub->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [ADC];Entries");
@@ -470,15 +471,15 @@ int main(int argc, char* argv[])
   signalDistrTimeCutDistCut_noisePeakSub_electrons->SetName("signalDistrTimeCutDistCut_noisePeakSub_electrons");
   signalDistrTimeCutDistCut_noisePeakSub_electrons->SetTitle("Hit signal distribution (positivized) in the time cut, highest PH strip neighboring the extrapolated one, noise peak subtracted;Hit signal [e^{-}];Entries");
   TH1D* noiseDistrTimeCut = new TH1D("noiseDistrTimeCut", "Signal distribution (positivized) not associated with a hit in the time cut;Signal [ADC];Entries", 201, -100.5, 100.5);
-  TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 562, -50.5, 511.5);
+  TH1D* signalDistrTimeDistHPHcut = new TH1D("signalDistrTimeDistHPHcut", "Hit signal distribution (positivized), time cut, distance cut, strip HPH cut;Hit signal[ADC];Entries", 500, -50.5, 511.5);
 
   // signal on the strip with highest ph
-  TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 562, -50.5, 511.5);
-  TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
-  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 562, -50.5, 511.5);
-  TH1D* stripHPHDistrTimeCutDistCut_electrons = new TH1D("stripHPHDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[e^{-}];Entries", 562, -50.5 * ADCtoe, 511.5 * ADCtoe);
-  TH1D* backgroundDistrHPH_electrons = new TH1D("backgrounDistrHPH_electrons", "Backgorund distribution of the strip with highest PH;Signal [e^{-}];Entries", 562, -50.5 * ADCtoe, 511.5 * ADCtoe);
-  TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 562, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCut = new TH1D("stripHPHDistrTimeCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge;Hit signal[ADC];Entries", 500, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCutDistCut = new TH1D("stripHPHDistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 500, -50.5, 511.5);
+  TH1D* backgroundDistrHPH = new TH1D("backgrounDistrHPH", "Backgorund distribution of the strip with highest PH;Signal [ADC];Entries", 500, -50.5, 511.5);
+  TH1D* stripHPHDistrTimeCutDistCut_electrons = new TH1D("stripHPHDistrTimeCutDistCut_electrons", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge, highest PH strip neighboring the extrapolated one;Hit signal[e^{-}];Entries", 500, -50.5 * ADCtoe, 511.5 * ADCtoe);
+  TH1D* backgroundDistrHPH_electrons = new TH1D("backgrounDistrHPH_electrons", "Backgorund distribution of the strip with highest PH;Signal [e^{-}];Entries", 500, -50.5 * ADCtoe, 511.5 * ADCtoe);
+  TH1D* stripHPH_plusNeigh_DistrTimeCutDistCut = new TH1D("stripHPH_plusNeigh_DistrTimeCutDistCut", "Hit signal distribution (positivized) in the time cut, for the strip with highest charge plus its highest neighbor, highest PH strip neighboring the extrapolated one;Hit signal[ADC];Entries", 500, -50.5, 511.5);
   TH1D* stripHPHDiffExtra = new TH1D("stripHPHDiffExtra", "Difference in strip number between extracted and highest PH strip in the time cut;ExtraStr - HiPHSt  [Strip];Entries", 21, -10.5, 10.5);
   TH2D* phAroundHPHstripTimeCut = new TH2D("phAroundHPHstripTimeCut", "PH of the hit centered on the strip with highest PH, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 562, -50.5, 511.5);
   TH2D* phAroundExtraStripTimeCut = new TH2D("phAroundExtraStripTimeCut", "PH of the hit centered on the extrapolated strip, in the time cut;Strip;PH [ADC]", 21, -10.5, 10.5, 562, -50.5, 511.5);
